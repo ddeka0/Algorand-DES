@@ -1,8 +1,7 @@
 #include <sodium.h>
 #include <math.h>
 
-int main(void)
-{
+int main(void) {
     if (sodium_init() < 0) {
         /* panic! the library couldn't be initialized, it is not safe to use */
     }
@@ -38,51 +37,35 @@ int main(void)
     return 0;
 }
 
-
-void PRG(char *buf, char *seed)
-{
-const size_t size=32;
-
-randombytes_buf_deterministic(buf, size,seed);
-
+void PRG(char *buf, char *seed) {
+	const size_t size=32;
+	randombytes_buf_deterministic(buf, size,seed);
 }
 
-int compare(char *buf1,char *buf2)
-{
+int compare(char *buf1,char *buf2) {
     const size_t size=32;
     int retval = sodium_compare(buf1, buf2, size);
     return retval;
 }
 
-
-
-
-
-long long B(int k,int w, int p)
-{
-long long retval = C(w,k)*(pow(p,k))*(pow(1-p,w-k));
-return retval;
+long long B(int k,int w, int p) {
+	long long retval = C(w,k)*(pow(p,k))*(pow(1-p,w-k));
+	return retval;
 }
 
-long long sumB(int k,int w,int p,int j)
-{
-long long retval = 0;
-for(int i=0;i<=j;i++)
-{
-    retval = retval + B(k,w,p);
-}
-return retval;
-
+long long sumB(int k,int w,int p,int j) {
+	long long retval = 0;
+	for(int i=0;i<=j;i++) {
+		retval = retval + B(k,w,p);
+	}
+	return retval;
 }
 
-void get_sign(char *sig, char *msg, char * sk)
-{
-        crypto_sign_detached(sig, NULL, msg, strlen(msg), sk);
-
+void get_sign(char *sig, char *msg, char * sk) {
+    crypto_sign_detached(sig, NULL, msg, strlen(msg), sk);
 }
 
-string longDivision(string number, int divisor) 
-{ 
+string longDivision(string number, int divisor)  { 
     // As result can be very large store it in string 
     string ans; 
     
@@ -96,8 +79,7 @@ string longDivision(string number, int divisor)
     // Repeatedly divide divisor with temp. After  
     // every division, update temp to include one  
     // more digit. 
-    while (number.size() > idx) 
-    { 
+    while (number.size() > idx)  { 
         // Store result in answer i.e. temp / divisor 
         ans += (temp / divisor) + '0'; 
           
@@ -114,19 +96,14 @@ string longDivision(string number, int divisor)
 } 
 
 
-void Too_long_divide(char *sig)
-{
-
-for(int i=0;i<32;i++)
-{
-    longDivision(sig,pow(2,16));
-}
-
+void Too_long_divide(char *sig) {
+    for(int i=0;i<32;i++) {
+        longDivision(sig,pow(2,16));
+    }
 }
   
 
-void Sortition(char *sk, char *seed, int tau,int role, double w, double W )
-{
+void Sortition(char *sk, char *seed, int tau,int role, double w, double W ) {
     double p = tau/W;
     int j=0;
     char Buffer[32];
@@ -135,8 +112,6 @@ void Sortition(char *sk, char *seed, int tau,int role, double w, double W )
     memcpy(Buffer,result,64);
     PRG(Buffer,seed);
     get_sign(sig,Buffer,sk);
-
-
 }
 
 
