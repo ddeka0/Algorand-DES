@@ -5,6 +5,8 @@
           All the source files are in /src/
           Related Header files are in /include/
           Helpter code and functions are in /utility_library/
+          
+          libsodium code is not integrated yet
 
 #### Instruction
 build the project: in root directory of git repo
