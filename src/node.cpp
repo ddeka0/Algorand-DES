@@ -32,3 +32,14 @@ void Node::decide() {
         this->decide_event_started = true;
     }
 }
+sortionResponse Node::sortition() {
+    sortionResponse resp;
+    resp.hash = 1;
+    resp.pi = 2;
+    resp.j = rand()%MAX_NODES;
+    return resp;
+}
+int Node::computePriority() {
+    // calculate sha for j number of times
+    return rand()%MAX_NODES;
+}

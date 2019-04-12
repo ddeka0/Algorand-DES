@@ -13,7 +13,9 @@ public:
 		this->gossip_found = false;
 		this->decide_event_started = false;
 	}
-    void sendMsg(const Event &event,shared_ptr<Node> dstNode);	
+	void sendMsg(const Event &event,shared_ptr<Node> dstNode);	
 	void sendGossip(const Event &event);
-    void decide();  // just a dummy second round task
+	void decide();  // just a dummy second round task
+	sortionResponse sortition(); // TODO: modify this sortition function
+	int	computePriority();
 };

@@ -25,7 +25,7 @@ void executeEvent(const Event &event) {
 }
 
 int main() {
-
+	srand(time(NULL));
 	auto A = shared_ptr<Node>(new Node(1));
 	auto B = shared_ptr<Node>(new Node(2));
 	auto C = shared_ptr<Node>(new Node(3));

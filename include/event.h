@@ -12,6 +12,7 @@ public:
 	shared_ptr<Node> targetNode;
 	string msgToDeliver;
 	
+	// add more field if required
 	Event(int refTime,int eventTime,shared_ptr<Node> targetNode,string msg,
         int eventType,int timeOut) {
 		this->refTime = refTime;
@@ -21,5 +22,6 @@ public:
 		this->eventType = eventType;
 		this->eventTimeOutTime = timeOut;
 	}
+	// overload < operator so that the queue can be sorted atomatically
 	bool operator < (const Event & event) const;
 };
