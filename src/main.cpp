@@ -5,6 +5,8 @@
 std::set<Event> EventQ; 	
 vector<shared_ptr<Node>> all_nodes;
 
+int delays[MAX_NODES][MAX_NODES];
+
 void decide_all() {
 	for(auto & node:all_nodes) {
 		node->decide();

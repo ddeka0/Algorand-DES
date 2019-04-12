@@ -1,5 +1,7 @@
 #include "include/node.h"
-extern unsigned char delays[][];
+#include "include/network_util.h"
+
+extern int delays[][MAX_NODES];
 
 extern std::set<Event> EventQ;
 
