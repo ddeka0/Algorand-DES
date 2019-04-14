@@ -1,39 +1,11 @@
 #pragma once
 #include <bits/stdc++.h>
+#include <any>
 #include "include/network_util.h"
+#include <memory>
 
 using namespace std;
 
-using myVariantType = std::variant<gossipMessage, noMessage>;
-
-struct PrintMessage
-{
-	void operator()(gossipMessage &msg)
-	{
-		msg();
-	}
-	void operator()(noMessage &msg)
-	{
-		msg();
-	}
-};
-struct getPriority
-{
-	int operator()(gossipMessage &msg)
-	{
-		return msg.priority;
-	}
-	// add more later
-};
-
-struct getGossipType
-{
-	int operator()(gossipMessage &msg)
-	{
-		return msg.gossipType;
-	}
-	// add more later
-};
 class Node;
 class Event
 {
@@ -43,15 +15,15 @@ public:
 	eventType evType; // it is an enum
 	int eventTimeOutTime;
 	shared_ptr<Node> targetNode; // where to execute
-	myVariantType msgToDeliver;  // handles different types of message
+	std::any msgToDeliver;		 // handles different types of message
 	int roundNumber;
 
 	// add more field if required
 	Event(int refTime,
 		  int eventTime,
 		  shared_ptr<Node> targetNode,
-		  myVariantType const &msg,
-		  eventType evType, 
+		  std::any msg,
+		  eventType evType,
 		  int timeOut,
 		  int roundNumber)
 	{

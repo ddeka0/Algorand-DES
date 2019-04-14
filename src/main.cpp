@@ -2,7 +2,7 @@
 #include "include/node.h"
 #include "include/network_util.h"
 
-std::set<Event> EventQ;
+std::multiset<Event> EventQ;
 vector<shared_ptr<Node>> all_nodes;
 
 int delays[MAX_NODES][MAX_NODES];
@@ -11,6 +11,11 @@ void executeEvent(const Event &event)
 {
 	auto targetNode = event.targetNode;
 	int eventType = event.evType;
+	int eventTime = event.eventTime;
+	int refTime = event.refTime;
+	cout <<"got eventType = " << eventType <<" for targetNode "<<targetNode->nodeId << endl;
+	cout <<"got eventTime = " << eventTime <<" for targetNode "<<targetNode->nodeId << endl;
+	cout <<"got refTime = " << refTime <<" for targetNode "<<targetNode->nodeId << endl;
 
 	switch (eventType)
 	{
@@ -41,33 +46,30 @@ int main()
 {
 	srand(time(NULL));
 
-	auto A = shared_ptr<Node>(new Node(1));
-	auto B = shared_ptr<Node>(new Node(2));
-	auto C = shared_ptr<Node>(new Node(3));
-	auto D = shared_ptr<Node>(new Node(4));
-	auto E = shared_ptr<Node>(new Node(5));
+	shared_ptr<Node> A = shared_ptr<Node>(new Node(1));
+	shared_ptr<Node> B = shared_ptr<Node>(new Node(2));
+	shared_ptr<Node> C = shared_ptr<Node>(new Node(3));
+	shared_ptr<Node> D = shared_ptr<Node>(new Node(4));
 
 	all_nodes.push_back(A);
 	all_nodes.push_back(B);
 	all_nodes.push_back(C);
 	all_nodes.push_back(D);
-	all_nodes.push_back(E);
 
 	A->peers.push_back(D);
 	A->peers.push_back(C);
 	B->peers.push_back(C);
 	C->peers.push_back(D);
-	D->peers.push_back(E);
 
 	delays[A->nodeId][D->nodeId] = 2;
 	delays[A->nodeId][C->nodeId] = 1;
 	delays[B->nodeId][C->nodeId] = 2;
-	delays[C->nodeId][D->nodeId] = 1;
-	delays[D->nodeId][B->nodeId] = 2;
+	delays[C->nodeId][D->nodeId] = 3;
 
 	// push all the start events of all the nodes
-	for (auto node : all_nodes)
+	for (shared_ptr<Node> &node : all_nodes)
 	{
+		cout <<"hi"<<endl;
 		noMessage msg;
 		Event new_event(
 			0,								// ref start time
@@ -75,11 +77,12 @@ int main()
 			node,							// where to execute
 			msg,							// what to send
 			BLOCK_PROPOSER_SORTITION_EVENT,	// type of event
-			PRIORITY_GOSSIP_TIMEOUT,		// timeout if any
+			TIMEOUT_NOT_APPLICABLE,		// timeout if any
 			1);								// round number
+		
 		EventQ.insert(new_event);			// push the event in the heap
 	}
-
+	cout <<"Initial EventQ size = "<<EventQ.size() << endl;
 	while (true)
 	{
 		if (EventQ.empty())

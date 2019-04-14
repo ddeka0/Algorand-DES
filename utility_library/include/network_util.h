@@ -1,5 +1,7 @@
 #pragma once
 #include <bits/stdc++.h>
+#include <any>
+#include <memory>
 using namespace std;
 
 #define PRIORITY_GOSSIP_TIMEOUT 3
@@ -15,9 +17,9 @@ enum gossipType
 
 enum eventType
 {
-	BLOCK_PROPOSER_SORTITION_EVENT,
-	GOSSIP_EVENT,
-	SELECT_TOP_PROPOSER_EVENT
+	BLOCK_PROPOSER_SORTITION_EVENT = 0,
+	GOSSIP_EVENT	= 1,
+	SELECT_TOP_PROPOSER_EVENT = 2
 };
 
 class sortionResponse
@@ -45,10 +47,10 @@ public:
 		this->subUserIndex = subUserIndex;
 		this->priority = priority;
 	}
-	void operator()()
+	void Print()
 	{
 		cout << "hash = " << hashOutput << endl;
-		cout << "j	 = " << subUserIndex << endl;
+		cout << "j = " << subUserIndex << endl;
 		cout << "priority = " << priority << endl;
 	}
 };

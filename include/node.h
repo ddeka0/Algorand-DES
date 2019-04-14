@@ -1,7 +1,7 @@
 #pragma once
 #include "include/event.h"
 
-class Node {
+class Node : public std::enable_shared_from_this<Node> {
 public:
 	int nodeId;
 	vector<shared_ptr<Node>> peers;
