@@ -15,6 +15,7 @@ port = 12345
 # this makes the server listen to requests  
 # coming from other computers on the network 
 s.bind(('', port))         
+
 print ("socket binded to %s" %(port)) 
   
 # put the socket into listening mode 
