@@ -6,13 +6,11 @@ public:
 	int nodeId;
 	vector<shared_ptr<Node>> peers;
 	bool priority_gossip_found;
-	bool decide_event_started;
 	set<int> prioritySet;
 	
 	Node(int Id) {
 		this->nodeId = Id;
-		this->gossip_found = false;
-		this->decide_event_started = false;
+		this->priority_gossip_found = false;
 	}
 	void sendMsg(const Event &event,shared_ptr<Node> dstNode);	
 	void sendGossip(const Event &event);
