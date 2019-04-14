@@ -5,8 +5,9 @@ class Node {
 public:
 	int nodeId;
 	vector<shared_ptr<Node>> peers;
-	bool gossip_found;
+	bool priority_gossip_found;
 	bool decide_event_started;
+	set<int> prioritySet;
 	
 	Node(int Id) {
 		this->nodeId = Id;
@@ -15,7 +16,8 @@ public:
 	}
 	void sendMsg(const Event &event,shared_ptr<Node> dstNode);	
 	void sendGossip(const Event &event);
-	void decide();  // just a dummy second round task
+	void selectTopProposer(Event const & event);  // just a dummy second round task
 	sortionResponse sortition(); // TODO: modify this sortition function
 	int	computePriority();
+	void proposePriority(const Event &event);
 };

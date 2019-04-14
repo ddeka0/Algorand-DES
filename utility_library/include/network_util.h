@@ -1,19 +1,27 @@
 #pragma once
 #include <bits/stdc++.h>
 
-#define GOSSIP_EVENT	0
-#define DECIDE_EVENT	1
-#define GOSSIP_TIMEOUT 	6
-#define MAX_NODES       100
+#define PRIORITY_GOSSIP_TIMEOUT 	3
+#define TIMEOUT_NOT_APPLICABLE		-1
+#define MAX_NODES       			100
 // 
 // add more function and data types // #defines only
+enum gossipType {
+	PRIORITY_GOSSIP,
+	BLOCK_GOSSIP
+};
 
+enum eventType {
+	BLOCK_PROPOSER_SORTITION_EVENT,
+	GOSSIP_EVENT,
+	SELECT_TOP_PROPOSER_EVENT
+};
 
 class sortionResponse {
 public:
 	int hash;
 	int pi;
-	int j
+	int j;
 };
 
 class gossipMessage {
@@ -23,5 +31,16 @@ public:
 	int hashOutput;
 	int subUserIndex;
 	int priority;
+	gossipMessage(int gossipType,int roundNumber,int hashOutput,
+		int subUserIndex,int priority) {
+		this->gossipType = gossipType;
+		this->roundNumber = roundNumber;
+		this->hashOutput = hashOutput;
+		this->subUserIndex = subUserIndex;
+		this->priority = priority;
+	}
+};
+class noMessage {
+	
 };
 

@@ -2,24 +2,28 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+using myVariantType = std::variant<gossipMessage,noMessage>;
 class Node;
 class Event {
 public:
 	int refTime;	// start reference time of this type of event
 	int eventTime;
-	int eventType;
+	eventType evType;
 	int eventTimeOutTime;
 	shared_ptr<Node> targetNode;
-	string msgToDeliver;
+	myVariantType msgToDeliver;
+	int roundNumber;
 	
 	// add more field if required
-	Event(int refTime,int eventTime,shared_ptr<Node> targetNode,string msg,
-        int eventType,int timeOut) {
+	Event(int refTime,int eventTime,shared_ptr<Node> targetNode,
+		myVariantType const & msg,
+        eventType evType,int timeOut) {
+
 		this->refTime = refTime;
 		this->eventTime = eventTime;
 		this->targetNode = targetNode;
 		this->msgToDeliver = msg;
-		this->eventType = eventType;
+		this->evType = evType;
 		this->eventTimeOutTime = timeOut;
 	}
 	// overload < operator so that the queue can be sorted atomatically
