@@ -1,9 +1,9 @@
 #include <bits/stdc++.h>
 #include "include/node.h"
 #include "include/network_util.h"
+vector<shared_ptr<Node>> all_nodes;
 
 std::multiset<Event> EventQ;
-vector<shared_ptr<Node>> all_nodes;
 
 int delays[MAX_NODES][MAX_NODES];
 
@@ -13,6 +13,7 @@ void executeEvent(const Event &event)
 	int eventType = event.evType;
 	int eventTime = event.eventTime;
 	int refTime = event.refTime;
+	
 	cout <<"got eventType = " << eventType <<" for targetNode "<<targetNode->nodeId << endl;
 	cout <<"got eventTime = " << eventTime <<" for targetNode "<<targetNode->nodeId << endl;
 	cout <<"got refTime = " << refTime <<" for targetNode "<<targetNode->nodeId << endl;

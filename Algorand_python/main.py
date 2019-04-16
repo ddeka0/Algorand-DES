@@ -20,6 +20,7 @@ def executeEvent(ev):
 
 
 if __name__ == "__main__":
+
 	a = Node(1)
 	b = Node(2)
 	c = Node(3)

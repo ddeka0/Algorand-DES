@@ -1,6 +1,5 @@
 # !/bin/python3
 from event import Event
-from sortedcontainers import SortedList
 from network_utils import*
 
 class Node(object):
@@ -10,13 +9,16 @@ class Node(object):
 		self.priorityGossipFound = False
 		self.prioritySet = SortedList()
 
+	def __str__(self):
+		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
+
 	def sendMsg(self,event,dstNode):
 		newEvent = Event(event.refTime,
 						event.evTime + delays[self.nodeId][dstNode.nodeId],
 						event.evType,
 						event.msgToDeliver,
 						event.timeOut,
-						event.targetNode,
+						dstNode,
 						event.round)
 
 		eventQ.add(newEvent)
@@ -24,12 +26,19 @@ class Node(object):
 		print("Msg sent to (gossip message) ",dstNode.nodeId)
 
 	def sendGossip(self,ev):
+		print("Round Number = ",ev.round)
+		print("Executing sendGossip at ",self.nodeId)
+		print("Message is :")
+
+
 		message = ev.msgToDeliver
 		if message.gossipType == GossipType.PRIORITY_GOSSIP:
 			self.prioritySet.add(message.priority)
 			self.priorityGossipFound = True
 		else:
 			print("This code should never be executed")
+
+		print(message)
 
 		for peer in self.peerList:
 			if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:

@@ -31,16 +31,14 @@ class gossipMessage(object):
 		self.subUserIndex = subUserIndex
 		self.priority = priority
 
-	def Print(self):
-		print("hash = ",self.hash)
-		print("j = ", self.subUserIndex)
-		print("priority = ", self.priority)
+	def __str__(self):
+		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
 
 class noMessage(object):
 	def __init__(self):
 		pass
-	def Print(self):
-		print("This is not a valid message")
+	def __str__(self):
+		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
 
 MAX_NODES 				=	10
 PRIORITY_GOSSIP_TIMEOUT	=	3

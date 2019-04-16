@@ -11,3 +11,6 @@ class Event(object):
 
     def __lt__(self, other):
         return self.evTime < other.evTime
+
+    def __str__(self):
+        return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
