@@ -40,9 +40,14 @@ class Node(object):
 
 		print(message)
 
+		for i in range(2):
+			self.peerList.append(random.choice(allNodes))
+
 		for peer in self.peerList:
 			if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
 				self.sendMsg(ev,peer)
+
+		self.peerList.clear()
 
 		print("\n")
 
@@ -63,7 +68,7 @@ class Node(object):
 						self,
 						ev.round + 1)
 
-		eventQ.add(newEvent)
+		# eventQ.add(newEvent)
 		print("\n")
 
 	def sortition(self):
