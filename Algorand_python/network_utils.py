@@ -1,7 +1,9 @@
 # !/bin/python3
 from enum import Enum
 from sortedcontainers import SortedList
+import random
 from pprint import pprint
+import numpy as np
 
 delays = []
 eventQ = SortedList()
@@ -40,7 +42,25 @@ class noMessage(object):
 	def __str__(self):
 		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
 
-MAX_NODES 				=	10
+def init_Delays():
+	global delays
+	global allNodes
+
+	for i in range(MAX_NODES):
+		lz = [0] * MAX_NODES
+		delays.append(lz)
+
+	for i in allNodes:
+		for j in allNodes:
+			if i==j:
+				delays[i.nodeId][j.nodeId] = 0
+			else:
+				normal_delay = np.random.normal(200,400,1)
+				normal_delay = list(normal_delay)[0]
+				delays[i.nodeId][j.nodeId] = max(0,normal_delay)/100
+
+
+MAX_NODES 				=	4
 PRIORITY_GOSSIP_TIMEOUT	=	3
 TIMEOUT_NOT_APPLICABLE	=	-1
 

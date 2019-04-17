@@ -7,6 +7,7 @@ def executeEvent(ev):
 	print("got eventTime = ", ev.evTime, " for targetNode ", ev.targetNode.nodeId)
 	print("got refTime = ", ev.refTime, " for targetNode ", ev.targetNode.nodeId)
 
+
 	eventType = ev.evType
 	targetNode = ev.targetNode
 	if eventType == EventType.BLOCK_PROPOSER_SORTITION_EVENT:
@@ -19,31 +20,26 @@ def executeEvent(ev):
 		print("Event Type is not recognised")
 
 
+
+
+
 if __name__ == "__main__":
 
-	a = Node(1)
-	b = Node(2)
-	c = Node(3)
-	d = Node(4)
-
-	allNodes.append(a)
-	allNodes.append(b)
-	allNodes.append(c)
-	allNodes.append(d)
-
-	a.peerList.append(d)
-	a.peerList.append(c)
-	b.peerList.append(c)
-	c.peerList.append(d)
-
 	for i in range(MAX_NODES):
-		lz = [0] * MAX_NODES
-		delays.append(lz)
+		allNodes.append(Node(i))
 
-	delays[a.nodeId][d.nodeId] = 2
-	delays[a.nodeId][c.nodeId] = 1
-	delays[b.nodeId][c.nodeId] = 2
-	delays[c.nodeId][d.nodeId] = 3
+	init_Delays()
+
+	# a.peerList.append(d)
+	# a.peerList.append(c)
+	# b.peerList.append(c)
+	# c.peerList.append(d)
+
+
+	# delays[a.nodeId][d.nodeId] = 2
+	# delays[a.nodeId][c.nodeId] = 1
+	# delays[b.nodeId][c.nodeId] = 2
+	# delays[c.nodeId][d.nodeId] = 3
 
 
 	for node in allNodes:
@@ -57,7 +53,9 @@ if __name__ == "__main__":
 						1)
 		eventQ.add(newEvent)
 
+
 	print("Initial eventQ size = ",len(eventQ))
+
 
 	while(True):
 		if len(eventQ) == 0:
