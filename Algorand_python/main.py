@@ -25,8 +25,11 @@ def executeEvent(ev):
 
 if __name__ == "__main__":
 
+	init_AsymmtericKeys(sk_List,pk_List)
+	init_w(w_list)
+
 	for i in range(MAX_NODES):
-		allNodes.append(Node(i))
+		allNodes.append(Node(i,sk_List[i],pk_List[i],w_list[i]))
 
 	init_Delays()
 

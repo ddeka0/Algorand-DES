@@ -1,15 +1,35 @@
 import random
-import ecdsa
-import binomial
-import PRG
+# returns nCr
+def nCr(n, r):
+    return (fact(n) // (fact(r) * fact(n - r)))
+
+# Returns factorial of n
+def fact(n):
+    res = 1
+
+    for i in range(2, n + 1):
+        res = res * i
+
+    return res
 
 
-M = 10
-N = 2000
+# Returns binomial distribution
+def B(k,w,p):
+    return nCr(w,k)*(p**k)*((1-p)**(w-k))
+
+
+#Returns PRG seed
+def PRG(seed):
+    # PRG seed
+    random.seed(seed)
+    # Get random 256 bit number
+    hash = random.randint(0,(2**256-1))
+    return hash
+
 
 def Sortition(sk,seed,tau,role,w,W):
-    randomNo = PRG.prg(seed+role)
-    hash =  (sk.sign((str(randomNo)).encode('utf-8'))).hex()
+    pi = PRG(seed+role)
+    hash =  (sk.sign((str(pi)).encode('utf-8'))).hex()
     p = tau/W
     j = 0
     hashint = int(hash,16)
@@ -20,53 +40,16 @@ def Sortition(sk,seed,tau,role,w,W):
         leftlimit = 0
         rightlimit = 0
         for k in range(j):
-            leftlimit = leftlimit+binomial.B(k,w, p)
+            leftlimit = leftlimit+B(k,w, p)
 
         for k in range(j+1):
-            rightlimit = rightlimit + binomial.B( k,w, p)
+            rightlimit = rightlimit +B( k,w, p)
 
-        print("value ", value)
-        print("left right :" ,leftlimit,rightlimit)
+        # print("value ", value)
+        # print("left right :" ,leftlimit,rightlimit)
 
         if(leftlimit>value or value>=rightlimit):
             j = j+1
         else:
             break
-    return j
-    #return tuple((hash,randomNo,j))
-
-
-
-
-# SECP256k1 is the Bitcoin elliptic curve
-listsk = []
-listvk = []
-
-for i in range(N):
-    listsk.append(ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1))
-    print("sk = ",i)
-
-for i in range(N):
-    listvk.append(listsk[i].get_verifying_key())
-    print("vk = ", i)
-
-seed = "HASHOFPREVIOUSBLOCK"
-tau = 20
-W  = 50000
-listw = []
-
-for i in range(N):
-    listw.append(random.randint(1,50))
-
-s = 0
-for t in range(M):
-    k = 0
-    for i in range(N):
-        k = k + Sortition(listsk[i],seed,tau,"sdsds",listw[i],W)
-        print("k = ",k)
-
-    s = s + k
-
-s = s / M
-
-print(s)
+    return tuple((hash,pi,j))

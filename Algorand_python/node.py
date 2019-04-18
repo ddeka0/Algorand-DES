@@ -3,11 +3,17 @@ from event import Event
 from network_utils import*
 
 class Node(object):
-	def __init__(self, Id):
+	def __init__(self, Id,secretkey,publickey,w):
+		self.secretkey = secretkey
+		self.privatekey = publickey
 		self.nodeId = Id
 		self.peerList=[]
+		self.w = w
 		self.priorityGossipFound = False
 		self.prioritySet = SortedList()
+		self.tau = 20
+		self.W = 500
+		self.seed = "HASHOFPREVIOUSBLOCK" # TODO: compute hash for different rounds
 
 	def __str__(self):
 		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
@@ -71,9 +77,9 @@ class Node(object):
 		# eventQ.add(newEvent)
 		print("\n")
 
-	def sortition(self):
-		resp = srtnResp(1,2,10)	# TODO: implement this sortition algorithm
-		return resp
+	# def sortition(self):
+	# 	resp = srtnResp(1,2,10)	# TODO: implement this sortition algorithm
+	# 	return resp
 
 	def computePriority(self):
 		return 1 				# TODO: generate random number
@@ -81,8 +87,8 @@ class Node(object):
 	def proposePriority(self,ev):
 		print("Round Number = ",ev.round)
 		print("Executing proposePriority event at ",self.nodeId)
-		resp = self.sortition()
-
+		retval = Sortition(self.secretkey,self.seed,self.tau,"hello",self.w,self.W)
+		resp = srtnResp(retval[0],retval[1],retval[2])
 		if resp.j > 0:
 			minPrio = 10000
 			for i in range(resp.j):
@@ -106,7 +112,7 @@ class Node(object):
 
 			print("Pushed an GOSSIP_EVENT at time ",ev.evTime)
 
-			newEvent = Event(ev.refTime + PRIORITY_GOSSIP_TIMEOUT + 1,
+		newEvent = Event(ev.refTime + PRIORITY_GOSSIP_TIMEOUT + 1,
 							ev.evTime + PRIORITY_GOSSIP_TIMEOUT + 1,
 							EventType.SELECT_TOP_PROPOSER_EVENT,
 							noMessage(),
@@ -114,7 +120,7 @@ class Node(object):
 							self,
 							ev.round)
 
-			eventQ.add(newEvent)
+		eventQ.add(newEvent)
 
-			print("pushed an SELECT_TOP_PROPOSER_EVENT at time ",ev.evTime + PRIORITY_GOSSIP_TIMEOUT + 1)
-			print("\n")
+		print("pushed an SELECT_TOP_PROPOSER_EVENT at time ",ev.evTime + PRIORITY_GOSSIP_TIMEOUT + 1)
+		print("\n")
