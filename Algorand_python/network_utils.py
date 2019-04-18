@@ -1,13 +1,19 @@
 # !/bin/python3
 from enum import Enum
 from sortedcontainers import SortedList
+from sortiton import *
 import random
 from pprint import pprint
 import numpy as np
+import ecdsa
+
 
 delays = []
 eventQ = SortedList()
 allNodes = []
+sk_List = []
+pk_List = []
+w_list = []
 
 class EventType(Enum):
 	BLOCK_PROPOSER_SORTITION_EVENT	= 0
@@ -57,10 +63,25 @@ def init_Delays():
 			else:
 				normal_delay = np.random.normal(200,400,1)
 				normal_delay = list(normal_delay)[0]
-				delays[i.nodeId][j.nodeId] = max(0,normal_delay)/100
+				delays[i.nodeId][j.nodeId] = max(0,normal_delay)/100 # TODO: change value here
+
+def init_AsymmtericKeys(listsk,listpk):
+
+	for i in range(MAX_NODES):
+		listsk.append(ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1))
+		print("sk = ", i)
+
+	for i in range(MAX_NODES):
+		listpk.append(listsk[i].get_verifying_key())
+		print("vk = ", i)
 
 
-MAX_NODES 				=	4
+def init_w(listw):
+	for i in range(MAX_NODES):
+		listw.append(random.randint(1, 50))
+
+
+MAX_NODES 				=	20
 PRIORITY_GOSSIP_TIMEOUT	=	3
 TIMEOUT_NOT_APPLICABLE	=	-1
 
