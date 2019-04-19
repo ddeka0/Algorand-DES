@@ -7,6 +7,7 @@ from pprint import pprint
 import numpy as np
 import ecdsa
 import hashlib
+import secrets
 
 delays = []
 eventQ = SortedList()

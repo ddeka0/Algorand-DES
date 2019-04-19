@@ -71,19 +71,22 @@ class Node(object):
 	def selectTopProposer(self,ev):
 		#print("Round Number = ",ev.round)
 		IamTopProposer = None
+		MyPriority = None
 		if self.priorityGossipFound:
 			res = FindMaxPriorityAndNode(self.priorityList)
 			#print(self.nodeId," selects ",res[1].nodeId," as topProposer with priority ",res[0])
 			if res[1].nodeId == self.nodeId:
 				IamTopProposer = True
+				MyPriority = res[0]
 				print("I am (",self.nodeId,") topProposer and ",res[0]," is my priority")
 
 		if IamTopProposer is not None:
 			# I need to create a block and gossip to the network
 			prevBlock = self.blockChain[len(self.blockChain) - 1]
-			prevBlockHash = hashlib.sha256(prevBlock.__str__().encode())
-			print(prevBlockHash)
-			print(prevBlockHash.hexdigest())
+			prevBlockHash = hashlib.sha256(prevBlock.__str__().encode()).hexdigest()
+			thisBlockContent = secrets.randbits(256)
+			newBlockPropMsg = BlockProposeMsg(prevBlockHash,thisBlockContent,MyPriority)
+			print(newBlockPropMsg)
 
 
 
