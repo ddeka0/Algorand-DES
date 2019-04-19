@@ -15,7 +15,11 @@ class Node(object):
 		self.W = 500
 		self.lastGossipMessage = ""
 		self.sentGossipMessages = []
+		self.blockChain = []
 		self.seed = "HASHOFPREVIOUSBLOCK" # TODO: compute hash for different rounds
+		# Set Genesis Block
+		genesisBlock = Block(GENESIS_BLOCK_CONTENT)
+		self.blockChain.append(genesisBlock)
 
 	def __str__(self):
 		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
@@ -61,15 +65,30 @@ class Node(object):
 			self.lastGossipMessage = message.__str__() # not very perfect but still stops some messages
 			self.sentGossipMessages.append(message)
 		else:
-			#pass
-			print("Message Discarded : already sent via this Node [",self.nodeId,"]")
+			pass
+			#print("Message Discarded : already sent via this Node [",self.nodeId,"]")
 
 	def selectTopProposer(self,ev):
 		#print("Round Number = ",ev.round)
-
+		IamTopProposer = None
+		MyPriority = None
 		if self.priorityGossipFound:
 			res = FindMaxPriorityAndNode(self.priorityList)
-			print(self.nodeId," selects ",res[1].nodeId," as topProposer with priority ",res[0])
+			#print(self.nodeId," selects ",res[1].nodeId," as topProposer with priority ",res[0])
+			if res[1].nodeId == self.nodeId:
+				IamTopProposer = True
+				MyPriority = res[0]
+				print("I am (",self.nodeId,") topProposer and ",res[0]," is my priority")
+
+		if IamTopProposer is not None:
+			# I need to create a block and gossip to the network
+			prevBlock = self.blockChain[len(self.blockChain) - 1]
+			prevBlockHash = hashlib.sha256(prevBlock.__str__().encode()).hexdigest()
+			thisBlockContent = secrets.randbits(256)
+			newBlockPropMsg = BlockProposeMsg(prevBlockHash,thisBlockContent,MyPriority)
+			print(newBlockPropMsg)
+
+
 
 		self.priorityGossipFound = False
 		self.priorityList.clear()
@@ -100,9 +119,9 @@ class Node(object):
 			for i in range(resp.j):
 				minPrio = min(self.computePriority(),minPrio)
 
-			newGossipMsg = gossipMessage(GossipType.PRIORITY_GOSSIP,
+			newGossipMsg = priorityMessage(GossipType.PRIORITY_GOSSIP,
 										ev.round,
-										resp.hash,
+										resp.hashValue,
 										resp.j,
 										minPrio,
 										self)
