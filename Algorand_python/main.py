@@ -32,6 +32,8 @@ if __name__ == "__main__":
 
 	init_Delays()
 
+
+
 	#print(delays)
 
 	for node in allNodes:

@@ -15,7 +15,11 @@ class Node(object):
 		self.W = 500
 		self.lastGossipMessage = ""
 		self.sentGossipMessages = []
+		self.blockChain = []
 		self.seed = "HASHOFPREVIOUSBLOCK" # TODO: compute hash for different rounds
+		# Set Genesis Block
+		genesisBlock = Block(GENESIS_BLOCK_CONTENT)
+		self.blockChain.append(genesisBlock)
 
 	def __str__(self):
 		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
@@ -74,6 +78,13 @@ class Node(object):
 				IamTopProposer = True
 				print("I am (",self.nodeId,") topProposer and ",res[0]," is my priority")
 
+		if IamTopProposer is not None:
+			# I need to create a block and gossip to the network
+			prevBlock = self.blockChain[len(self.blockChain) - 1]
+			prevBlockHash = hashlib.sha256(prevBlock.__str__().encode())
+			print(prevBlockHash)
+			print(prevBlockHash.hexdigest())
+
 
 
 		self.priorityGossipFound = False
@@ -105,9 +116,9 @@ class Node(object):
 			for i in range(resp.j):
 				minPrio = min(self.computePriority(),minPrio)
 
-			newGossipMsg = gossipMessage(GossipType.PRIORITY_GOSSIP,
+			newGossipMsg = priorityMessage(GossipType.PRIORITY_GOSSIP,
 										ev.round,
-										resp.hash,
+										resp.hashValue,
 										resp.j,
 										minPrio,
 										self)
