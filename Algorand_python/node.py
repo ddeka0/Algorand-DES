@@ -102,33 +102,17 @@ class Node(object):
 			print(newBlockPropMsg)
 
 			# Gossip This newBlockPropMsg
-			randomNodeCnt = 0
-			while randomNodeCnt <= GOSSIP_FAN_OUT:
-				randomNode = random.choice(allNodes)
-				if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
-					self.peerList.append(randomNode)
-					randomNodeCnt = randomNodeCnt + 1
+			# create a sendBlockPropGossip on myself and return
+			newEvent = Event(ev.evTime,
+							 ev.evTime,
+							 EventType.BLOCK_PROPOSE_GOSSIP_EVENT,
+							 newBlockPropMsg,
+							 BLOCK_PROPOSE_GOSSIP_TIMEOUT,
+							 self,
+							 self,
+							 ev.roundNumber)
 
-			# Two random nodes are selected
-			# Now create two events and push in the Priority Queue
-
-			for peer in self.peerList:
-				# check the delay constraint first and then cerate event
-				#
-				if ev.evTime + 1 + delays[self.nodeId][peer.nodeId] - ev.refTime <= BLOCK_PROPOSE_GOSSIP_TIMEOUT:
-					newEvent = Event(ev.evTime + 1,
-									 ev.evTime + 1,
-									 EventType.BLOCK_PROPOSE_GOSSIP_EVENT,
-									 newBlockPropMsg,
-									 BLOCK_PROPOSE_GOSSIP_TIMEOUT,
-									 peer,
-									 self,
-									 ev.roundNumber)
-
-					eventQ.add(newEvent)
-
-			self.sentGossipMessages.append(newBlockPropMsg)
-			self.peerList.clear()
+			eventQ.add(newEvent)
 
 
 		self.priorityGossipFound = False
