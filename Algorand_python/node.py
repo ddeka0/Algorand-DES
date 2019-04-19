@@ -118,7 +118,6 @@ class Node(object):
 		self.priorityGossipFound = False
 		self.priorityList.clear()
 
-
 		newEvent = Event(ev.evTime + BLOCK_PROPOSE_GOSSIP_TIMEOUT + 1,
 						ev.evTime + BLOCK_PROPOSE_GOSSIP_TIMEOUT + 1,
 						EventType.REDUCTION_COMMITTEE_VOTE_STEP_ONE,
@@ -150,18 +149,20 @@ class Node(object):
 
 			for peer in self.peerList:
 				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
+					#print("Block Gossiped to ",peer.nodeId," by ",self.nodeId)
 					self.sendMsg(ev,peer)
 
 			self.peerList.clear()
 			self.sentGossipMessages.append(message)
-
 		else:
+			#print("Message Discarded : already sent via this Node [", self.nodeId, "]")
 			pass
 
 
 
 	def reductionCommitteVoteStepOne(self, ev):  # this is happening in 33 sec
-		print("Performing reduction on ", self.nodeId)
+		pass
+		#print("Performing reduction on ", self.nodeId)
 
 
 	def computePriority(self,resp):
@@ -171,7 +172,7 @@ class Node(object):
 			inp = str(resp.hashValue) + str(i + 1)
 			sha = hashlib.sha256(inp.encode())
 			hashList.append(sha.hexdigest())
-		return hashList.index(min(hashList)) + 1
+		return int(min(hashList),16)
 
 
 	def proposePriority(self,ev):
@@ -180,10 +181,7 @@ class Node(object):
 		retval = Sortition(self.secretkey,self.seed,self.tau,"hello",self.w,self.W)
 		resp = srtnResp(retval[0],retval[1],retval[2])
 		if resp.j > 0:
-			minPrio = 10000
-			for i in range(resp.j):
-				minPrio = min(self.computePriority(resp),minPrio)
-
+			minPrio = self.computePriority(resp)
 			newPriorityMsg = priorityMessage(GossipType.PRIORITY_GOSSIP,
 										ev.roundNumber,
 										resp.hashValue,

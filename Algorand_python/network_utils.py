@@ -110,7 +110,7 @@ def init_w(listw):
 
 
 def FindMaxPriorityAndNode(priorityList):
-	minPrioValue = 100000000
+	minPrioValue = 2**260
 	minPrioNode = None
 	minPrioMsg = None
 	for msg in priorityList:
