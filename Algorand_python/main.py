@@ -2,14 +2,16 @@
 from node import *
 from network_utils import *
 
-def executeEvent(ev):
-	print("got eventType = ",ev.evType," for targetNode ",ev.targetNode.nodeId)
-	print("got eventTime = ", ev.evTime, " for targetNode ", ev.targetNode.nodeId)
-	print("got refTime = ", ev.refTime, " for targetNode ", ev.targetNode.nodeId)
 
+def executeEvent(ev):
+
+	#print("got eventType = ",ev.evType," for targetNode ",ev.targetNode.nodeId)
+	#print("got eventTime = ", ev.evTime, " for targetNode ", ev.targetNode.nodeId)
+	#print("got refTime = ", ev.refTime, " for targetNode ", ev.targetNode.nodeId)
 
 	eventType = ev.evType
 	targetNode = ev.targetNode
+
 	if eventType == EventType.BLOCK_PROPOSER_SORTITION_EVENT:
 		targetNode.proposePriority(ev)
 	elif eventType == EventType.GOSSIP_EVENT:
@@ -18,9 +20,6 @@ def executeEvent(ev):
 		targetNode.selectTopProposer(ev)
 	else:
 		print("Event Type is not recognised")
-
-
-
 
 
 if __name__ == "__main__":
@@ -33,32 +32,21 @@ if __name__ == "__main__":
 
 	init_Delays()
 
-	# a.peerList.append(d)
-	# a.peerList.append(c)
-	# b.peerList.append(c)
-	# c.peerList.append(d)
-
-
-	# delays[a.nodeId][d.nodeId] = 2
-	# delays[a.nodeId][c.nodeId] = 1
-	# delays[b.nodeId][c.nodeId] = 2
-	# delays[c.nodeId][d.nodeId] = 3
-
+	#print(delays)
 
 	for node in allNodes:
-		print("pushed new event")
+		#print("pushed new event")
 		newEvent = Event(0,
 						0,
 						EventType.BLOCK_PROPOSER_SORTITION_EVENT,
 						noMessage(),
 						TIMEOUT_NOT_APPLICABLE,
 						node,
+						node,
 						1)
 		eventQ.add(newEvent)
 
-
-	print("Initial eventQ size = ",len(eventQ))
-
+	#print("Initial eventQ size = ",len(eventQ))
 
 	while(True):
 		if len(eventQ) == 0:

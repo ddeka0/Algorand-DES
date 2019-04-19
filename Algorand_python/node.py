@@ -10,9 +10,11 @@ class Node(object):
 		self.peerList=[]
 		self.w = w
 		self.priorityGossipFound = False
-		self.prioritySet = SortedList()
+		self.priorityList = []
 		self.tau = 20
 		self.W = 500
+		self.lastGossipMessage = ""
+		self.sentGossipMessages = []
 		self.seed = "HASHOFPREVIOUSBLOCK" # TODO: compute hash for different rounds
 
 	def __str__(self):
@@ -25,46 +27,53 @@ class Node(object):
 						event.msgToDeliver,
 						event.timeOut,
 						dstNode,
+						self,
 						event.round)
 
 		eventQ.add(newEvent)
-		print("Pushed gossip event at time ",event.evTime + delays[self.nodeId][dstNode.nodeId])
-		print("Msg sent to (gossip message) ",dstNode.nodeId)
+		#print("Pushed gossip event at time ",event.evTime + delays[self.nodeId][dstNode.nodeId])
+		#print("Msg sent to (gossip message) ",dstNode.nodeId)
 
 	def sendGossip(self,ev):
-		print("Round Number = ",ev.round)
-		print("Executing sendGossip at ",self.nodeId)
-		print("Message is :")
+		#print("Round Number = ",ev.round)
+		#print("Executing sendGossip at ",self.nodeId)
+		#print("Message is :")
+		if (ev.msgToDeliver not in self.sentGossipMessages):
+			message = ev.msgToDeliver
+			if message.gossipType == GossipType.PRIORITY_GOSSIP:
+				self.priorityList.append(message)
+				self.priorityGossipFound = True
+			else:
+				print("This code should never be executed")
 
+			randomNodeCnt = 0
+			while(randomNodeCnt <= GOSSIP_FAN_OUT):
+				randomNode = random.choice(allNodes)
+				if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
+					self.peerList.append(randomNode)
+					randomNodeCnt = randomNodeCnt + 1
 
-		message = ev.msgToDeliver
-		if message.gossipType == GossipType.PRIORITY_GOSSIP:
-			self.prioritySet.add(message.priority)
-			self.priorityGossipFound = True
+			for peer in self.peerList:
+				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
+					self.sendMsg(ev,peer)
+
+			self.peerList.clear()
+			self.lastGossipMessage = message.__str__() # not very perfect but still stops some messages
+			self.sentGossipMessages.append(message)
 		else:
-			print("This code should never be executed")
-
-		print(message)
-
-		for i in range(2):
-			self.peerList.append(random.choice(allNodes))
-
-		for peer in self.peerList:
-			if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
-				self.sendMsg(ev,peer)
-
-		self.peerList.clear()
-
-		print("\n")
+			#pass
+			print("Message Discarded : already sent via this Node [",self.nodeId,"]")
 
 	def selectTopProposer(self,ev):
-		print("Round Number = ",ev.round)
+		#print("Round Number = ",ev.round)
+
 		if self.priorityGossipFound:
-			topProposerPriority = self.prioritySet[0]
-			print(self.nodeId," selects ",topProposerPriority," as topProposer")
+			res = FindMaxPriorityAndNode(self.priorityList)
+			print(self.nodeId," selects ",res[1].nodeId," as topProposer with priority ",res[0])
 
 		self.priorityGossipFound = False
-		self.prioritySet.clear()
+		self.priorityList.clear()
+		self.sentGossipMessages.clear()
 
 		newEvent = Event(ev.evTime + 1,
 						ev.evTime + 1,
@@ -72,21 +81,18 @@ class Node(object):
 						noMessage(),
 						TIMEOUT_NOT_APPLICABLE,
 						self,
+						self,
 						ev.round + 1)
 
 		# eventQ.add(newEvent)
-		print("\n")
-
-	# def sortition(self):
-	# 	resp = srtnResp(1,2,10)	# TODO: implement this sortition algorithm
-	# 	return resp
+		#print("\n")
 
 	def computePriority(self):
-		return 1 				# TODO: generate random number
+		return np.random.randint(1,100) 				# TODO: generate random number
 
 	def proposePriority(self,ev):
-		print("Round Number = ",ev.round)
-		print("Executing proposePriority event at ",self.nodeId)
+		#print("Round Number = ",ev.round)
+		#print("Executing proposePriority event at ",self.nodeId)
 		retval = Sortition(self.secretkey,self.seed,self.tau,"hello",self.w,self.W)
 		resp = srtnResp(retval[0],retval[1],retval[2])
 		if resp.j > 0:
@@ -98,7 +104,8 @@ class Node(object):
 										ev.round,
 										resp.hash,
 										resp.j,
-										minPrio)
+										minPrio,
+										self)
 
 			newEvent = Event(ev.refTime,
 							ev.evTime,
@@ -106,11 +113,12 @@ class Node(object):
 							newGossipMsg,
 							PRIORITY_GOSSIP_TIMEOUT,
 							self,
+							self,
 							ev.round)
 
 			eventQ.add(newEvent)
 
-			print("Pushed an GOSSIP_EVENT at time ",ev.evTime)
+			#print("Pushed an GOSSIP_EVENT at time ",ev.evTime)
 
 		newEvent = Event(ev.refTime + PRIORITY_GOSSIP_TIMEOUT + 1,
 							ev.evTime + PRIORITY_GOSSIP_TIMEOUT + 1,
@@ -118,9 +126,10 @@ class Node(object):
 							noMessage(),
 							TIMEOUT_NOT_APPLICABLE,
 							self,
+						 	self,
 							ev.round)
 
 		eventQ.add(newEvent)
 
-		print("pushed an SELECT_TOP_PROPOSER_EVENT at time ",ev.evTime + PRIORITY_GOSSIP_TIMEOUT + 1)
-		print("\n")
+		#print("pushed an SELECT_TOP_PROPOSER_EVENT at time ",ev.evTime + PRIORITY_GOSSIP_TIMEOUT + 1)
+		#print("\n")
