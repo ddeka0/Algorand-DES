@@ -58,8 +58,11 @@ class priorityMessage(object):
 		self.sourceNode = sourceNode
 
 	def __str__(self):
-		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
-
+		#return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
+		return "\n" + "roundNumber = " + str(self.roundNumber) + "\n" \
+				+ "hashOutput = " + str(self.hashOutput) + "\n" \
+				+ "subUserIndex = " + str(self.subUserIndex) + "\n" \
+				+ "priority = " + str(self.priority)
 
 class noMessage(object):
 	def __init__(self):
@@ -104,13 +107,14 @@ def init_w(listw):
 def FindMaxPriorityAndNode(priorityList):
 	minPrioValue = 100000000
 	minPrioNode = None
+	minPrioMsg = None
 	for msg in priorityList:
 		p = msg.priority
 		if p < minPrioValue:
 			minPrioValue = p
 			minPrioNode = msg.sourceNode
-
-	return tuple((minPrioValue,minPrioNode))
+			minPrioMsg = msg
+	return tuple((minPrioNode,minPrioMsg))
 
 
 class Block(object):
@@ -119,14 +123,19 @@ class Block(object):
 		self.prevBlockHash = prevBlockHash
 
 	def __str__(self):
-		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
-
+		#return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
+		return "\n" + "transactions = " + str(self.transactions) + "\n" \
+				+ "prevBlockHash = " + str(self.prevBlockHash)
 
 class BlockProposeMsg(object):
-	def __init__(self,prevBlockHash, thisBlockContent, proposerPriority):
+	def __init__(self,prevBlockHash, thisBlockContent, priorityMsgPayload):
 		self.prevBlockHash = prevBlockHash
 		self.thisBlockContent = thisBlockContent
-		self.nodePriority = proposerPriority
+		# start of Node's priority payload
+		self.priorityMsgPayload = priorityMsgPayload
+		self.sourceNode = self
 
 	def __str__(self):
-		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
+		return "\n" + "prevBlockHash = " + str(self.prevBlockHash) + "\n" \
+				+ "thisBlockContent = " + str(self.thisBlockContent) + "\n" \
+				+ self.priorityMsgPayload.__str__()

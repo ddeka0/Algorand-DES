@@ -23,8 +23,8 @@ def PRG(seed):
 	# PRG seed
 	random.seed(seed)
 	# Get random 256 bit number
-	hash = random.randint(0,(2**256-1))
-	return hash
+	hashValue = random.randint(0,(2**256-1))
+	return hashValue
 
 
 def Sortition(sk, seed, tauProposer, role, w, W):
@@ -50,4 +50,4 @@ def Sortition(sk, seed, tauProposer, role, w, W):
 			j = j + 1
 		else:
 			break
-	return tuple((hash,pi,j))
+	return tuple((VRFhash,pi,j))
