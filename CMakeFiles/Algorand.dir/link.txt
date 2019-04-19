@@ -1,0 +1,1 @@
+/usr/bin/c++  -std=c++17 -Wall -g   CMakeFiles/Algorand.dir/src/main.cpp.o CMakeFiles/Algorand.dir/src/node.cpp.o CMakeFiles/Algorand.dir/src/event.cpp.o  -o build/bin/Algorand 

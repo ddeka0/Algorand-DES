@@ -5,10 +5,13 @@ cscope.*
 TAGS
 tags
 
-./build/
-./CMakeFiles/
-./cmake_install.cmake
-./CMakeCache.txt
-./Makefile
+build/
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+Makefile
+Algorand_python/venv/
+Algorand_python/__pycache__/
+Algorand_python/test-helper.py
 
 !.gitignore
