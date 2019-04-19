@@ -14,10 +14,14 @@ sk_List = []
 pk_List = []
 w_list = []
 
-MAX_NODES 				= 20
+MAX_NODES 				= 100
 PRIORITY_GOSSIP_TIMEOUT	= 3
 TIMEOUT_NOT_APPLICABLE	= -1
 MAX_ALGORAND			= 50
+
+# max(MIN_DELAY,normal_delay)/DIVIDE_BY
+MIN_DELAY				= 0
+DIVIDE_BY				= 1000
 
 GOSSIP_FAN_OUT 			= 2
 
@@ -75,7 +79,7 @@ def init_Delays():
 			else:
 				normal_delay = np.random.normal(200,400,1)
 				normal_delay = list(normal_delay)[0]
-				delays[i.nodeId][j.nodeId] = max(0,normal_delay)/1000  # TODO: change value here
+				delays[i.nodeId][j.nodeId] = max(MIN_DELAY,normal_delay)/DIVIDE_BY  # TODO: change value here
 
 
 def init_AsymmtericKeys(listsk, listpk):

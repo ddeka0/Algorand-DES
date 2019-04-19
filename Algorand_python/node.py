@@ -61,15 +61,20 @@ class Node(object):
 			self.lastGossipMessage = message.__str__() # not very perfect but still stops some messages
 			self.sentGossipMessages.append(message)
 		else:
-			#pass
-			print("Message Discarded : already sent via this Node [",self.nodeId,"]")
+			pass
+			#print("Message Discarded : already sent via this Node [",self.nodeId,"]")
 
 	def selectTopProposer(self,ev):
 		#print("Round Number = ",ev.round)
-
+		IamTopProposer = None
 		if self.priorityGossipFound:
 			res = FindMaxPriorityAndNode(self.priorityList)
-			print(self.nodeId," selects ",res[1].nodeId," as topProposer with priority ",res[0])
+			#print(self.nodeId," selects ",res[1].nodeId," as topProposer with priority ",res[0])
+			if res[1].nodeId == self.nodeId:
+				IamTopProposer = True
+				print("I am (",self.nodeId,") topProposer and ",res[0]," is my priority")
+
+
 
 		self.priorityGossipFound = False
 		self.priorityList.clear()
