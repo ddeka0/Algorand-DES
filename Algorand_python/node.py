@@ -72,21 +72,31 @@ class Node(object):
 		#print("Round Number = ",ev.round)
 		IamTopProposer = None
 		MyPriority = None
+		MyPriorityMsg = None
+
 		if self.priorityGossipFound:
 			res = FindMaxPriorityAndNode(self.priorityList)
-			#print(self.nodeId," selects ",res[1].nodeId," as topProposer with priority ",res[0])
-			if res[1].nodeId == self.nodeId:
+			# res will container three things
+			# 1. res[0] = Node (with MAX priority)
+			# 2. res[1] = its priority Message (corresponding)
+			# print(self.nodeId," selects ",res[1].nodeId," as topProposer with priority ",res[0])
+			if res[0].nodeId == self.nodeId:
 				IamTopProposer = True
-				MyPriority = res[0]
-				print("I am (",self.nodeId,") topProposer and ",res[0]," is my priority")
+				MyPriority = res[1].priority
+				print("I am (",self.nodeId,") topProposer and ",MyPriority," is my priority")
+				MyPriorityMsg = res[1]
 
 		if IamTopProposer is not None:
 			# I need to create a block and gossip to the network
 			prevBlock = self.blockChain[len(self.blockChain) - 1]
 			prevBlockHash = hashlib.sha256(prevBlock.__str__().encode()).hexdigest()
 			thisBlockContent = secrets.randbits(256)
-			newBlockPropMsg = BlockProposeMsg(prevBlockHash,thisBlockContent,MyPriority)
+			#print("xx = ",prevBlockHash)
+			newBlockPropMsg = BlockProposeMsg(prevBlockHash,thisBlockContent,MyPriorityMsg)
 			print(newBlockPropMsg)
+
+
+
 
 
 
@@ -119,7 +129,7 @@ class Node(object):
 			for i in range(resp.j):
 				minPrio = min(self.computePriority(),minPrio)
 
-			newGossipMsg = priorityMessage(GossipType.PRIORITY_GOSSIP,
+			newPriorityMsg = priorityMessage(GossipType.PRIORITY_GOSSIP,
 										ev.round,
 										resp.hashValue,
 										resp.j,
@@ -129,7 +139,7 @@ class Node(object):
 			newEvent = Event(ev.refTime,
 							ev.evTime,
 							EventType.GOSSIP_EVENT,
-							newGossipMsg,
+							newPriorityMsg,
 							PRIORITY_GOSSIP_TIMEOUT,
 							self,
 							self,
