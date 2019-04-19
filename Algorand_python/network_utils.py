@@ -18,6 +18,7 @@ w_list = []
 
 MAX_NODES = 30
 PRIORITY_GOSSIP_TIMEOUT = 3
+BLOCK_PROPOSE_GOSSIP_TIMEOUT	= 33
 TIMEOUT_NOT_APPLICABLE = -1
 MAX_ALGORAND = 50
 GENESIS_BLOCK_CONTENT = "We are building the best Algorand Discrete Event Simulator"
@@ -26,13 +27,17 @@ GENESIS_BLOCK_CONTENT = "We are building the best Algorand Discrete Event Simula
 MIN_DELAY = 0
 DIVIDE_BY = 1000
 
+
 GOSSIP_FAN_OUT 			= 2
 
 
 class EventType(Enum):
 	BLOCK_PROPOSER_SORTITION_EVENT = 0
-	GOSSIP_EVENT = 1
+	PRIORITY_GOSSIP_EVENT = 1
 	SELECT_TOP_PROPOSER_EVENT = 2
+	BLOCK_PROPOSE_GOSSIP_EVENT = 3
+	REDUCTION_COMMITTEE_VOTE_STEP_ONE = 4
+
 
 
 class GossipType(Enum):
@@ -49,7 +54,7 @@ class srtnResp(object):
 
 class priorityMessage(object):
 	def __init__(self, gossipType, roundNumber, hashOutput,
-				 subUserIndex, priority,sourceNode):
+				subUserIndex, priority,sourceNode):
 		self.gossipType = gossipType
 		self.roundNumber = roundNumber
 		self.hashOutput = hashOutput

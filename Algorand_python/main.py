@@ -14,10 +14,14 @@ def executeEvent(ev):
 
 	if eventType == EventType.BLOCK_PROPOSER_SORTITION_EVENT:
 		targetNode.proposePriority(ev)
-	elif eventType == EventType.GOSSIP_EVENT:
-		targetNode.sendGossip(ev)
+	elif eventType == EventType.PRIORITY_GOSSIP_EVENT:
+		targetNode.sendPriorityGossip(ev)
 	elif eventType == EventType.SELECT_TOP_PROPOSER_EVENT:
 		targetNode.selectTopProposer(ev)
+	elif eventType == EventType.BLOCK_PROPOSE_GOSSIP_EVENT:
+		targetNode.sendBlockPropGossip(ev)
+	elif eventType == EventType.REDUCTION_COMMITTEE_VOTE_STEP_ONE:
+		targetNode.reductionCommitteVoteStepOne(ev)
 	else:
 		print("Event Type is not recognised")
 
