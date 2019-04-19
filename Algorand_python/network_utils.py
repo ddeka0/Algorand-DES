@@ -18,6 +18,7 @@ w_list = []
 
 MAX_NODES = 30
 PRIORITY_GOSSIP_TIMEOUT = 3
+BLOCK_PROPOSE_GOSSIP_TIMEOUT	= 33
 TIMEOUT_NOT_APPLICABLE = -1
 MAX_ALGORAND = 50
 GENESIS_BLOCK_CONTENT = "We are building the best Algorand Discrete Event Simulator"
@@ -26,13 +27,17 @@ GENESIS_BLOCK_CONTENT = "We are building the best Algorand Discrete Event Simula
 MIN_DELAY = 0
 DIVIDE_BY = 1000
 
+
 GOSSIP_FAN_OUT 			= 2
 
 
 class EventType(Enum):
 	BLOCK_PROPOSER_SORTITION_EVENT = 0
-	GOSSIP_EVENT = 1
+	PRIORITY_GOSSIP_EVENT = 1
 	SELECT_TOP_PROPOSER_EVENT = 2
+	BLOCK_PROPOSE_GOSSIP_EVENT = 3
+	REDUCTION_COMMITTEE_VOTE_STEP_ONE = 4
+
 
 
 class GossipType(Enum):
@@ -49,7 +54,7 @@ class srtnResp(object):
 
 class priorityMessage(object):
 	def __init__(self, gossipType, roundNumber, hashOutput,
-				 subUserIndex, priority,sourceNode):
+				subUserIndex, priority,sourceNode):
 		self.gossipType = gossipType
 		self.roundNumber = roundNumber
 		self.hashOutput = hashOutput
@@ -58,8 +63,11 @@ class priorityMessage(object):
 		self.sourceNode = sourceNode
 
 	def __str__(self):
-		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
-
+		#return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
+		return "\n" + "roundNumber = " + str(self.roundNumber) + "\n" \
+				+ "hashOutput = " + str(self.hashOutput) + "\n" \
+				+ "subUserIndex = " + str(self.subUserIndex) + "\n" \
+				+ "priority = " + str(self.priority)
 
 class noMessage(object):
 	def __init__(self):
@@ -102,15 +110,16 @@ def init_w(listw):
 
 
 def FindMaxPriorityAndNode(priorityList):
-	minPrioValue = 100000000
+	minPrioValue = 2**260
 	minPrioNode = None
+	minPrioMsg = None
 	for msg in priorityList:
 		p = msg.priority
 		if p < minPrioValue:
 			minPrioValue = p
 			minPrioNode = msg.sourceNode
-
-	return tuple((minPrioValue,minPrioNode))
+			minPrioMsg = msg
+	return tuple((minPrioNode,minPrioMsg))
 
 
 class Block(object):
@@ -119,14 +128,19 @@ class Block(object):
 		self.prevBlockHash = prevBlockHash
 
 	def __str__(self):
-		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
-
+		#return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
+		return "\n" + "transactions = " + str(self.transactions) + "\n" \
+				+ "prevBlockHash = " + str(self.prevBlockHash)
 
 class BlockProposeMsg(object):
-	def __init__(self,prevBlockHash, thisBlockContent, proposerPriority):
+	def __init__(self,prevBlockHash, thisBlockContent, priorityMsgPayload):
 		self.prevBlockHash = prevBlockHash
 		self.thisBlockContent = thisBlockContent
-		self.nodePriority = proposerPriority
+		# start of Node's priority payload
+		self.priorityMsgPayload = priorityMsgPayload
+		self.sourceNode = self
 
 	def __str__(self):
-		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
+		return "\n" + "prevBlockHash = " + str(self.prevBlockHash) + "\n" \
+				+ "thisBlockContent = " + str(self.thisBlockContent) + "\n" \
+				+ self.priorityMsgPayload.__str__()
