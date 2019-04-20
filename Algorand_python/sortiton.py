@@ -1,7 +1,7 @@
 import random
 # returns nCr
 def nCr(n, r):
-	return (fact(n) // (fact(r) * fact(n - r)))
+	return fact(n) // (fact(r) * fact(n - r))
 
 # Returns factorial of n
 def fact(n):
@@ -34,10 +34,9 @@ def Sortition(sk, seed, tauProposer, role, w, W):
 	p = tauProposer/W
 	j = 0
 	hashIntValue = int(VRFhash,16)
-	value = hashIntValue/(2**(512))
+	value = hashIntValue/(2**512)
 
-	while(j <= w):
-		k = 0
+	while j <= w:
 		leftlimit = 0
 		rightlimit = 0
 		for k in range(j):
@@ -46,7 +45,7 @@ def Sortition(sk, seed, tauProposer, role, w, W):
 		for k in range(j+1):
 			rightlimit = rightlimit + B( k,w, p)
 
-		if(leftlimit > value or value >= rightlimit):
+		if leftlimit > value or value >= rightlimit:
 			j = j + 1
 		else:
 			break

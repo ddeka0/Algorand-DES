@@ -29,6 +29,10 @@ def executeEvent(ev):
 if __name__ == "__main__":
 
 	init_AsymmtericKeys(sk_List,pk_List)
+
+	print(len(sk_List))
+	print(len(pk_List))
+
 	init_w(w_list)
 
 	for i in range(MAX_NODES):
@@ -49,7 +53,8 @@ if __name__ == "__main__":
 						TIMEOUT_NOT_APPLICABLE,
 						node,
 						node,
-						1)
+						1,
+						0)	# Initial step Number
 		eventQ.add(newEvent)
 
 	#print("Initial eventQ size = ",len(eventQ))

@@ -8,6 +8,7 @@ import numpy as np
 import ecdsa
 import hashlib
 import secrets
+import pickle
 
 delays = []
 eventQ = SortedList()
@@ -16,7 +17,7 @@ sk_List = []
 pk_List = []
 w_list = []
 
-MAX_NODES = 30
+MAX_NODES = 100
 PRIORITY_GOSSIP_TIMEOUT = 3
 BLOCK_PROPOSE_GOSSIP_TIMEOUT	= 33
 TIMEOUT_NOT_APPLICABLE = -1
@@ -28,7 +29,7 @@ MIN_DELAY = 0
 DIVIDE_BY = 1000
 
 
-GOSSIP_FAN_OUT 			= 2
+GOSSIP_FAN_OUT 			= 3
 
 
 class EventType(Enum):
@@ -95,14 +96,11 @@ def init_Delays():
 
 
 def init_AsymmtericKeys(listsk, listpk):
-	for i in range(MAX_NODES):
-		listsk.append(ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1))
-		#print("sk = ", i)
-
-	for i in range(MAX_NODES):
-		listpk.append(listsk[i].get_verifying_key())
-		#print("vk = ", i)
-
+	pickleFile = open("keysFile-" + str(MAX_NODES), 'rb')
+	keys = pickle.load(pickleFile)
+	listsk.extend(keys[0])
+	listpk.extend(keys[1])
+	pickleFile.close()
 
 def init_w(listw):
 	for i in range(MAX_NODES):
@@ -110,7 +108,7 @@ def init_w(listw):
 
 
 def FindMaxPriorityAndNode(priorityList):
-	minPrioValue = 2**260
+	minPrioValue = 2**300
 	minPrioNode = None
 	minPrioMsg = None
 	for msg in priorityList:
