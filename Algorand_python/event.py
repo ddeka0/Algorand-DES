@@ -1,6 +1,6 @@
 # !/bin/python3
 class Event(object):
-    def __init__(self,refTime,eventTime,eventType,msg,timeOut,targetNode,sourceNode,roundNumber):
+    def __init__(self,refTime,eventTime,eventType,msg,timeOut,targetNode,sourceNode,roundNumber,stepNumber):
         self.refTime = refTime
         self.evTime = eventTime
         self.evType = eventType
@@ -9,6 +9,7 @@ class Event(object):
         self.targetNode = targetNode
         self.sourceNode = sourceNode
         self.roundNumber = roundNumber
+        self.stepNumber = stepNumber
 
     def __lt__(self, other):
         return self.evTime < other.evTime
