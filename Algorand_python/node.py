@@ -5,7 +5,7 @@ from network_utils import*
 class Node(object):
 	def __init__(self, Id, secretkey, publickey, w):
 		self.secretkey = secretkey
-		self.privatekey = publickey
+		self.publickey = publickey
 		self.nodeId = Id
 		self.peerList = []
 		self.w = w
@@ -21,7 +21,8 @@ class Node(object):
 		genesisBlock = Block(GENESIS_BLOCK_CONTENT)
 		self.blockChain.append(genesisBlock)
 
-		self.incomingProposedBlocks = []
+		self.incomingProposedBlocks = []	# this queue will be used for incoming block prop messages
+		self.incomingBlockVoteMsg = []		# this queue will be used for incoming vote block message
 
 	def __str__(self):
 		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
@@ -170,15 +171,101 @@ class Node(object):
 			#print("Block Prop Message Discarded : already sent via this Node [", self.nodeId, "] at time = ",ev.evTime)
 			pass
 
+	def reductionCommitteVoteStepOne(self, ev):  # this is happening in 33 sec # step = 1
+		# clear the record of outgoing proposed block gossip messages
+		# we are going to push new block vote gossip message in this list
+		self.sentGossipMessages.clear()
+
+		if len(self.incomingProposedBlocks) == 0:
+			print(self.nodeId ," I should vote on an empty block") # TODO implement
+		else:
+			# Find block from max priority proposer only and vote on it
+			minPrio = 2**300
+			maxPropBlockMsg = None
+			for propBlockMsg in self.incomingProposedBlocks:
+				if propBlockMsg.priorityMsgPayload.priority < minPrio:
+					minPrio = propBlockMsg.priorityMsgPayload.priority
+					maxPropBlockMsg = propBlockMsg
+			# We have got the minBlock (block from max priority)
+			self.genNextSeed(ev.roundNumber, ev.stepNumber)  # self.seed gets updated
+			retval = Sortition(self.secretkey, self.seed, self.tau, "hello", self.w, self.W)
+			# resp = committe sorition result
+			resp = srtnResp(retval[0],retval[1],retval[2]) # TODO remove
+			if resp.j > 0: # If I have own the committe
+				# push a gossip event on myself that will trigger further gossip
+				prevBlock = self.blockChain[len(self.blockChain) - 1]
+				prevBlockHash = hashlib.sha256(prevBlock.__str__().encode()).hexdigest()
+				thisBlockHash = hashlib.sha256(maxPropBlockMsg.block.__str__().encode()).hexdigest()
+
+				blockVoteMsg = BlockVoteMsg(self.publickey,
+											self.secretkey,
+											ev.roundNumber,
+											ev.stepNumber,
+											resp.hashValue,
+											resp.pi,
+											prevBlockHash,
+											thisBlockHash)
+
+				newEvent = Event(ev.evTime,
+								ev.evTime,
+								EventType.BLOCK_VOTE_GOSSIP_EVENT,
+								blockVoteMsg,
+								BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT,
+								self,
+								self,
+								ev.roundNumber,
+								ev.stepNumber) # step = 1
+
+				eventQ.add(newEvent)
+
+		# Push the reduction step 1 cound vote event after +3 sec
+		newEvent2 = Event(ev.evTime + BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT + 1,
+						ev.evTime + BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT + 1,
+						EventType.REDUCTION_COUNT_VOTE_STEP_ONE,
+						noMessage(),
+						TIMEOUT_NOT_APPLICABLE,
+						self,
+						self,
+						ev.roundNumber,
+						ev.stepNumber) # step = 1
+
+		eventQ.add(newEvent2)
+
+	def sendBlockVoteGossip(self,ev):
+		# self has received a proposed block just now
+		# update my incomingProposedBlock List and relay further if possible
+		# this incomingProposedBlock will be used in the reductionCommitteVoteStepOne() function
+		if ev.msgToDeliver not in self.sentGossipMessages:
+			message = ev.msgToDeliver
+			self.incomingBlockVoteMsg.append(message)
+
+			randomNodeCnt = 0
+
+			while randomNodeCnt < GOSSIP_FAN_OUT:
+				randomNode = random.choice(allNodes)
+				if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
+					self.peerList.append(randomNode)
+					randomNodeCnt = randomNodeCnt + 1
+
+			for peer in self.peerList:
+				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
+					print("Block Gossiped to ",peer.nodeId," by ",self.nodeId," at time  = ",ev.evTime)
+					self.sendMsg(ev,peer)
+				else:
+					print("More Delay")
+
+			self.peerList.clear()
+			self.sentGossipMessages.append(message)
+		else:
+			#print("Block Prop Message Discarded : already sent via this Node [", self.nodeId, "] at time = ",ev.evTime)
+			pass
+			#pass
 
 
-	def reductionCommitteVoteStepOne(self, ev):  # this is happening in 33 sec
-		# pass
-		self.genNextSeed(ev.roundNumber, ev.stepNumber)  # self.seed gets updated
-		retval = Sortition(self.secretkey, self.seed, self.tau, "hello", self.w, self.W)
-		resp = srtnResp(retval[0],retval[1],retval[2])
-		if resp.j > 0:
-			print(self.nodeId , " is a committe member now")
+	def reductionCountVoteStepOne(self,ev):
+		print(self.nodeId ," has started Count Vote in reduction step one")
+		#pass
+
 
 	def computePriority(self,resp):
 		hashList = []

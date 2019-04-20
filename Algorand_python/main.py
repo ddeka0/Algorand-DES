@@ -22,6 +22,10 @@ def executeEvent(ev):
 		targetNode.sendBlockPropGossip(ev)
 	elif eventType == EventType.REDUCTION_COMMITTEE_VOTE_STEP_ONE:
 		targetNode.reductionCommitteVoteStepOne(ev)
+	elif eventType == EventType.BLOCK_VOTE_GOSSIP_EVENT:
+		targetNode.sendBlockVoteGossip(ev)
+	elif eventType == EventType.REDUCTION_COUNT_VOTE_STEP_ONE:
+		targetNode.reductionCountVoteStepOne(ev)
 	else:
 		print("Event Type is not recognised")
 

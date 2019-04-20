@@ -17,15 +17,19 @@ sk_List = []
 pk_List = []
 w_list = []
 
-MAX_NODES = 100
+MAX_NODES = 30
+
+
+
 PRIORITY_GOSSIP_TIMEOUT = 3
 BLOCK_PROPOSE_GOSSIP_TIMEOUT	= 33
+BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT = 33 # TODO check once
 TIMEOUT_NOT_APPLICABLE = -1
 MAX_ALGORAND = 50
 GENESIS_BLOCK_CONTENT = "We are building the best Algorand Discrete Event Simulator"
 
 # max(MIN_DELAY,normal_delay)/DIVIDE_BY
-MIN_DELAY = 0
+MIN_DELAY = 100
 DIVIDE_BY = 1000
 
 
@@ -38,6 +42,8 @@ class EventType(Enum):
 	SELECT_TOP_PROPOSER_EVENT = 2
 	BLOCK_PROPOSE_GOSSIP_EVENT = 3
 	REDUCTION_COMMITTEE_VOTE_STEP_ONE = 4
+	BLOCK_VOTE_GOSSIP_EVENT = 5
+	REDUCTION_COUNT_VOTE_STEP_ONE = 6
 
 
 
@@ -132,13 +138,37 @@ class Block(object):
 
 class BlockProposeMsg(object):
 	def __init__(self,prevBlockHash, thisBlockContent, priorityMsgPayload):
-		self.prevBlockHash = prevBlockHash
-		self.thisBlockContent = thisBlockContent
+		self.block = Block(thisBlockContent,prevBlockHash)
 		# start of Node's priority payload
 		self.priorityMsgPayload = priorityMsgPayload
 		self.sourceNode = self
 
 	def __str__(self):
-		return "\n" + "prevBlockHash = " + str(self.prevBlockHash) + "\n" \
-				+ "thisBlockContent = " + str(self.thisBlockContent) + "\n" \
+		return "\n" + "block = " + str(self.block) + "\n" \
 				+ self.priorityMsgPayload.__str__()
+
+class VoteMsg(object):
+	def __init__(self, roundNumber, step, hashValue, pi, prevBlockHash,thisBlockHash):
+		self.roudNumber = roundNumber
+		self.step = step
+		self.hashValue = hashValue
+		self.pi = pi
+		self.prevBlockHash = prevBlockHash
+		self.thisBlockHash = thisBlockHash
+	def __str__(self):
+		return "roundNumber = " + str(self.roudNumber) + "\n" \
+			+ "step = " + str(self.step) + "\n" \
+			+ "hashValue = " + str(self.hashValue) + "\n" \
+			+ "pi = " + str(self.pi) + "\n" \
+			+ "prevBlockHash = " + str(self.prevBlockHash) + "\n" \
+			+ "thisBlockHash = " + str(self.thisBlockHash)
+
+class BlockVoteMsg(object):
+	def __init__(self, userPk, userSk, roundNumber, step, hashValue, pi, prevBlockHash, thisBlockHash):
+		self.userPk = userPk
+		msg = VoteMsg(roundNumber, step, hashValue, pi, prevBlockHash, thisBlockHash)
+		digest = userSk.sign(str(msg).encode())
+		# sgnVoteMsg is a tuple consisting of digest and the actual VoteMsg
+		# actual VoteMsg : will be used for verification of the digest
+		self.sgnVoteMsg = (digest,msg)
+
