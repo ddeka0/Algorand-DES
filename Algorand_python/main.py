@@ -14,10 +14,18 @@ def executeEvent(ev):
 
 	if eventType == EventType.BLOCK_PROPOSER_SORTITION_EVENT:
 		targetNode.proposePriority(ev)
-	elif eventType == EventType.GOSSIP_EVENT:
-		targetNode.sendGossip(ev)
+	elif eventType == EventType.PRIORITY_GOSSIP_EVENT:
+		targetNode.sendPriorityGossip(ev)
 	elif eventType == EventType.SELECT_TOP_PROPOSER_EVENT:
 		targetNode.selectTopProposer(ev)
+	elif eventType == EventType.BLOCK_PROPOSE_GOSSIP_EVENT:
+		targetNode.sendBlockPropGossip(ev)
+	elif eventType == EventType.REDUCTION_COMMITTEE_VOTE_STEP_ONE:
+		targetNode.reductionCommitteVoteStepOne(ev)
+	elif eventType == EventType.BLOCK_VOTE_GOSSIP_EVENT:
+		targetNode.sendBlockVoteGossip(ev)
+	elif eventType == EventType.REDUCTION_COUNT_VOTE_STEP_ONE:
+		targetNode.reductionCountVoteStepOne(ev)
 	else:
 		print("Event Type is not recognised")
 
@@ -25,10 +33,14 @@ def executeEvent(ev):
 if __name__ == "__main__":
 
 	init_AsymmtericKeys(sk_List,pk_List)
-	init_w(w_list)
+
+	print(len(sk_List))
+	print(len(pk_List))
+
+	init_w(ctx_Weight,pk_List)
 
 	for i in range(MAX_NODES):
-		allNodes.append(Node(i,sk_List[i],pk_List[i],w_list[i]))
+		allNodes.append(Node(i,sk_List[i],pk_List[i],ctx_Weight[pk_List[i]]))
 
 	init_Delays()
 
@@ -45,7 +57,8 @@ if __name__ == "__main__":
 						TIMEOUT_NOT_APPLICABLE,
 						node,
 						node,
-						1)
+						1,
+						0)	# Initial step Number
 		eventQ.add(newEvent)
 
 	#print("Initial eventQ size = ",len(eventQ))

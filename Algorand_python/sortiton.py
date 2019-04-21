@@ -1,7 +1,7 @@
 import random
 # returns nCr
 def nCr(n, r):
-	return (fact(n) // (fact(r) * fact(n - r)))
+	return fact(n) // (fact(r) * fact(n - r))
 
 # Returns factorial of n
 def fact(n):
@@ -27,17 +27,45 @@ def PRG(seed):
 	return hashValue
 
 
+def VerifySort(pk, hashValue, pi, seed, tau, role, w, W,jj):
+	if not pk.verify(hashValue, str((pi)).encode('utf-8')):
+		return 0
+	else:
+
+		hashval = hashValue.hex()
+		p = tau / W
+		j = 0
+		value = int(hashval,16) / (2 ** 512)
+		while j <= w:
+			leftlimit = 0
+			rightlimit = 0
+			for k in range(j):
+				leftlimit = leftlimit + B(k, w, p)
+
+			for k in range(j + 1):
+				rightlimit = rightlimit + B(k, w, p)
+
+			if leftlimit > value or value >= rightlimit:
+				j = j + 1
+			else:
+				break
+	if j != jj:
+		print("vvvvvvvvvvvvvvvvvvvv")
+	return j
+
 def Sortition(sk, seed, tauProposer, role, w, W):
 	# Refer to Algorand paper
 	pi = PRG(seed+role)
-	VRFhash = (sk.sign((str(pi)).encode('utf-8'))).hex()
+	VRFhash = (sk.sign((str(pi)).encode('utf-8')))
+
 	p = tauProposer/W
 	j = 0
-	hashIntValue = int(VRFhash,16)
-	value = hashIntValue/(2**(512))
 
-	while(j <= w):
-		k = 0
+	hashval = VRFhash.hex()
+	hashIntValue = int(hashval,16)
+	value = hashIntValue/(2**512)
+
+	while j <= w:
 		leftlimit = 0
 		rightlimit = 0
 		for k in range(j):
@@ -46,7 +74,7 @@ def Sortition(sk, seed, tauProposer, role, w, W):
 		for k in range(j+1):
 			rightlimit = rightlimit + B( k,w, p)
 
-		if(leftlimit > value or value >= rightlimit):
+		if leftlimit > value or value >= rightlimit:
 			j = j + 1
 		else:
 			break
