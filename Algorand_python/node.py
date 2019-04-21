@@ -12,7 +12,7 @@ class Node(object):
 		self.priorityGossipFound = False
 		self.priorityList = []
 		self.tau = MAX_NODES * 0.1 # 10 percent
-		self.tau_committee = MAX_NODES * 0.5  # 10 percent
+		self.tau_committee = MAX_NODES * 0.2  # 10 percent
 		self.W = MAX_NODES * (MAX_ALGORAND / 2)
 		self.lastGossipMessage = ""
 		self.sentGossipMessages = []
@@ -109,7 +109,7 @@ class Node(object):
 
 			newBlockPropMsg = BlockProposeMsg(prevBlockHash,thisBlockContent,MyPriorityMsg)
 
-			print(newBlockPropMsg)
+			print(H(newBlockPropMsg.block))
 
 			# Gossip This newBlockPropMsg
 			# create a sendBlockPropGossip on myself and return
@@ -178,7 +178,7 @@ class Node(object):
 		self.sentGossipMessages.clear()
 
 		if len(self.incomingProposedBlocks) == 0:
-			print(self.nodeId ," I should vote on an empty block") # TODO implement
+			print(self.nodeId ,"Reduction step1 starts and I should vote on an empty block") # TODO implement
 		else:
 			# Find block from max priority proposer only and vote on it
 			minPrio = 2**300
@@ -194,7 +194,7 @@ class Node(object):
 			resp = srtnResp(retval[0],retval[1],retval[2]) # TODO remove
 			if resp.j > 0: # If I have own the committe
 				# push a gossip event on myself that will trigger further gossip
-				print("I am a committe member with j = ",resp.j)
+				print(self.nodeId, " Reduction step1 starts and I am a committe member with j = ",resp.j)
 				prevBlock = self.blockChain[len(self.blockChain) - 1]
 				prevBlockHash = hashlib.sha256(prevBlock.__str__().encode()).hexdigest()
 				thisBlockHash = hashlib.sha256(maxPropBlockMsg.block.__str__().encode()).hexdigest()
@@ -252,7 +252,7 @@ class Node(object):
 
 			for peer in self.peerList:
 				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
-					print("Block Gossiped to ",peer.nodeId," by ",self.nodeId," at time  = ",ev.evTime)
+					#print("Block Gossiped to ",peer.nodeId," by ",self.nodeId," at time  = ",ev.evTime)
 					self.sendMsg(ev,peer)
 				else:
 					print("More Delay")
@@ -286,7 +286,7 @@ class Node(object):
 				return tuple((0,False,False))
 			else:
 				votes = VerifySort(pk,sortHash,pi,self.seed,self.tau_committee,"hello",ctx_Weight[pk],self.W,j)
-				print(self.nodeId," vote = ",votes)
+				#print(self.nodeId," vote = ",votes)
 				return tuple((votes,value,sortHash))
 
 	def CountVotes(self, Tstep ,ev):
@@ -297,10 +297,7 @@ class Node(object):
 		while True:
 			try:
 				m = msgs.pop()
-				retval = self.ProcessMsg(ev, m)
-				votes = retval[0]
-				value = retval[1]
-				sortHash = retval[2]
+				votes , value, sortHasg = self.ProcessMsg(ev, m)
 				if m.userPk in voters or votes == 0:
 					continue
 				voters.append(m.userPk)
@@ -315,11 +312,11 @@ class Node(object):
 
 
 	def reductionCountVoteStepOne(self,ev):
-		print(self.nodeId ," has started Count Vote in reduction step one")
+		#print(self.nodeId ," has started Count Vote in reduction step one")
 		hBlockOne = self.CountVotes(T_STEP_REDUCTION_STEP_ONE,ev)
 		if hBlockOne is not None:
-			print(self.nodeId ," got anough vote for ", hBlockOne)
-
+			print(self.nodeId ,"Reduction step2 starts and got anough vote for ", hBlockOne)
+		#pass
 
 
 	def computePriority(self,resp):

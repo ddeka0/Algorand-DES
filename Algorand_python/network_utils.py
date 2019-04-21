@@ -19,7 +19,7 @@ pk_List = []
 w_list = []
 ctx_Weight = {}
 
-MAX_NODES = 30
+MAX_NODES = 100
 TIMEOUT = None
 
 
@@ -32,7 +32,7 @@ MAX_ALGORAND = 50
 GENESIS_BLOCK_CONTENT = "We are building the best Algorand Discrete Event Simulator"
 
 # max(MIN_DELAY,normal_delay)/DIVIDE_BY
-MIN_DELAY = 100
+MIN_DELAY = 0
 DIVIDE_BY = 1000
 
 

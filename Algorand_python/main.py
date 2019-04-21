@@ -34,8 +34,7 @@ if __name__ == "__main__":
 
 	init_AsymmtericKeys(sk_List,pk_List)
 
-	print(len(sk_List))
-	print(len(pk_List))
+	print("max nodes in Algorand Network ", len(sk_List))
 
 	init_w(ctx_Weight,pk_List)
 
