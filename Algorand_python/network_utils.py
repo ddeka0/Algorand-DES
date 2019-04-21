@@ -9,7 +9,6 @@ import ecdsa
 import hashlib
 import secrets
 import pickle
-import countVotes
 
 delays = []
 eventQ = SortedList()

@@ -1,6 +1,9 @@
 # !/bin/python3
 from event import Event
 from network_utils import*
+from multiprocessing import  Pool,cpu_count
+from functools import partial
+import pathos.pools as pp
 
 class Node(object):
 	def __init__(self, Id, secretkey, publickey, w):
@@ -266,11 +269,13 @@ class Node(object):
 
 
 
-	def ProcessMsg(self, ev, m):
+	def ProcessMsg(self, ctxw ,m):
 		pk = m.userPk
 		signed_m = m.sgnVoteMsg[0] # index for digest sgnVoteMsg is tuple
 		msg = m.sgnVoteMsg[1] # index for msg
 		j = m.j
+
+
 		if not pk.verify(signed_m, str((msg)).encode('utf-8')):
 			print("Verification Failed")
 			return tuple((0,False,False))
@@ -285,34 +290,42 @@ class Node(object):
 				print("prev block hash mismatch")
 				return tuple((0,False,False))
 			else:
-				votes = VerifySort(pk,sortHash,pi,self.seed,self.tau_committee,"hello",ctx_Weight[pk],self.W,j)
+				votes = VerifySort(pk,sortHash,pi,self.seed,self.tau_committee,"hello",ctxw[pk],self.W,j)
 				#print(self.nodeId," vote = ",votes)
-				return tuple((votes,value,sortHash))
+				return tuple((votes,value,sortHash,pk))
+				#return 1
 
 	def CountVotes(self, Tstep ,ev):
 		counts = {}
-		voters = {}
 		msgs = self.incomingBlockVoteMsg
+		#print(self.nodeId," found ",len(msgs)," no of incoming vote messages")
 		voters = []
-		while True:
-			try:
-				m = msgs.pop()
-				votes , value, sortHasg = self.ProcessMsg(ev, m)
-				if m.userPk in voters or votes == 0:
-					continue
-				voters.append(m.userPk)
-				if value in counts:
-					counts[value] += votes
-				else:
-					counts[value] = votes
-				if counts[value] > Tstep * self.tau_committee:
-					return value
-			except IndexError:
-				return TIMEOUT
+		# TODO parallelize the following while loop
 
+		nprocs = cpu_count()
+
+		results = list(Pool(processes=nprocs).map(partial(self.ProcessMsg,ctx_Weight),msgs))
+
+		print("len of the result = ", len(results))
+
+		for res in results:
+			votes, value, sortHasg, pk = res
+
+			if pk in voters or votes == 0:
+				continue
+			voters.append(pk)
+			if value in counts:
+				counts[value] += votes
+			else:
+				counts[value] = votes
+			if counts[value] > Tstep * self.tau_committee:
+				return value
+
+		return None
 
 	def reductionCountVoteStepOne(self,ev):
 		#print(self.nodeId ," has started Count Vote in reduction step one")
+		#self.CountVotes(T_STEP_REDUCTION_STEP_ONE, ev)
 		hBlockOne = self.CountVotes(T_STEP_REDUCTION_STEP_ONE,ev)
 		if hBlockOne is not None:
 			print(self.nodeId ,"Reduction step2 starts and got anough vote for ", hBlockOne)
