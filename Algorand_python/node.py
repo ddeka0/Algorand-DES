@@ -3,7 +3,6 @@ from event import Event
 from network_utils import*
 from multiprocessing import  Pool,cpu_count
 from functools import partial
-import pathos.pools as pp
 
 class Node(object):
 	def __init__(self, Id, secretkey, publickey, w):
