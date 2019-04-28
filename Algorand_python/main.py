@@ -26,6 +26,14 @@ def executeEvent(ev):
 		targetNode.sendBlockVoteGossip(ev)
 	elif eventType == EventType.REDUCTION_COUNT_VOTE_STEP_ONE:
 		targetNode.reductionCountVoteStepOne(ev)
+	elif eventType == EventType.REDUCTION_COUNT_VOTE_STEP_TWO:
+		targetNode.reductionCountVoteStepTwo(ev)
+	elif eventType == EventType.BASTAR_COUNT_VOTE_ONE:
+		targetNode.BAstartCountVoteOne(ev)
+	elif eventType == EventType.BASTAR_COUNT_VOTE_TWO:
+		targetNode.BAstartCountVoteTwo(ev)
+	elif eventType == EventType.BASTAR_COUNT_VOTE_THREE:
+		targetNode.BAstartCountVoteThree(ev)
 	else:
 		print("Event Type is not recognised")
 
