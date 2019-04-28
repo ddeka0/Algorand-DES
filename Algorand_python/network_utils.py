@@ -18,7 +18,7 @@ pk_List = []
 w_list = []
 ctx_Weight = {}
 
-MAX_NODES = 30
+MAX_NODES = 10
 TIMEOUT = None
 
 REDUCTION_TWO = 2
@@ -199,4 +199,5 @@ class BlockVoteMsg(object):
 		self.j = j
 def H(block):
 	return (hashlib.sha256(str(block).encode())).hexdigest()
+
 
