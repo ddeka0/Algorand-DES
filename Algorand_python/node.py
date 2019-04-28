@@ -53,7 +53,7 @@ class Node(object):
 
 	def genNextSeed(self,roundNumber,stepNumber):
 		prevBlock = self.blockChain[len(self.blockChain) - 1]
-		prevBlockHash = hashlib.sha256(prevBlock.__str__().encode()).hexdigest()
+		prevBlockHash = H(prevBlock)
 		self.seed = prevBlockHash + str(roundNumber) + str(stepNumber)
 
 
@@ -93,7 +93,7 @@ class Node(object):
 		# clear the record of outgoing priority gossip messages
 		# we are going to push new block propose gossip message in this list
 		self.sentGossipMessages.clear()
-
+		
 		IamTopProposer = None
 		MyPriority = None
 		MyPriorityMsg = None
@@ -204,7 +204,7 @@ class Node(object):
 				# push a gossip event on myself that will trigger further gossip
 				#print(self.nodeId, " Reduction step1 starts and I am a committe member with j = ",resp.j)
 				prevBlock = self.blockChain[len(self.blockChain) - 1]
-				prevBlockHash = hashlib.sha256(prevBlock.__str__().encode()).hexdigest()
+				prevBlockHash = H(prevBlock)
 				thisBlockHash = hashlib.sha256(maxPropBlockMsg.block.__str__().encode()).hexdigest()
 
 				blockVoteMsg = BlockVoteMsg(self.publickey,
@@ -225,7 +225,7 @@ class Node(object):
 								self,
 								self,
 								ev.roundNumber,
-								ev.stepNumber) # step = 1
+								ev.stepNumber)
 
 				eventQ.add(newEvent)
 
@@ -238,7 +238,7 @@ class Node(object):
 						self,
 						self,
 						ev.roundNumber,
-						ev.stepNumber) # step = 1
+						ev.stepNumber)
 
 		eventQ.add(newEvent2)
 
@@ -354,7 +354,7 @@ class Node(object):
 		#self.CountVotes(T_STEP_REDUCTION_STEP_ONE, ev)
 		hBlockOne = self.CountVotes(T_STEP_REDUCTION_STEP_ONE,ev)
 		#print("Reduction step2 starts...")
-		if hBlockOne is not None:
+		if hBlockOne is not TIMEOUT:
 			print(self.nodeId ,"Got anough vote for ", hBlockOne)
 		else:
 			#print(self.nodeId, "Got hBlockOne TIMEOUT")
@@ -499,7 +499,7 @@ class Node(object):
 							  self,
 							  self,
 							  roundNumber,
-							  stepNumber)  # step = 1
+							  stepNumber)
 			eventQ.add(newEvent2)
 		elif flag == INVOKE_BA_START_COUNT_VOTE_TWO:
 			# Push the reduction step 2 cound vote event after +3 sec
@@ -533,13 +533,13 @@ class Node(object):
 			pass
 
 	def BAstartCountVoteOne(self,ev):
-		#print(self.nodeId, " BA* Count Vote ONE is executing in step = ",ev.stepNumber)
+		print(self.nodeId, " BA* Count Vote ONE is executing in step = ",ev.stepNumber)
 		step = ev.stepNumber
 		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev) # TODO T_STEP check
 		if r is TIMEOUT:
 			r = self.bastarBlockHash # we are using self.bastarBlockHash instead of block_hash
 			#print("BAstartCountVoteOne getting timeout")
-		elif r != self.getEmptyHash():
+		elif r is not self.getEmptyHash():
 			for s in range(ev.stepNumber,ev.stepNumber + 3):
 				self.BAstartCommitteVote(ev,ev.roundNumber,s,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)
 			if step == 3:
@@ -547,19 +547,30 @@ class Node(object):
 			#print("This is the final agreed value of hash = ",r," round ends.")
 
 			# Push the next sortion event
-			#Push the next sortion event
+			# Push the next sortion event
+			# newEvent = Event(ev.evTime + 1,
+			# 				 ev.evTime + 1,
+			# 				 EventType.BLOCK_PROPOSER_SORTITION_EVENT,
+			# 				 noMessage(),
+			# 				 TIMEOUT_NOT_APPLICABLE,
+			# 				 self,
+			# 				 self,
+			# 				 ev.roundNumber + 1,
+			# 				 0)  # Initial step Number
+
+			# eventQ.add(newEvent)
+			self.bastarOutput = r
 			newEvent = Event(ev.evTime + 1,
 							 ev.evTime + 1,
-							 EventType.BLOCK_PROPOSER_SORTITION_EVENT,
+							 EventType.FINAL_COUNT_VOTE,
 							 noMessage(),
 							 TIMEOUT_NOT_APPLICABLE,
 							 self,
 							 self,
-							 ev.roundNumber + 1,
-							 0)  # Initial step Number
+							 ev.roundNumber,
+							 FINAL_STEP)
 
 			eventQ.add(newEvent)
-			self.bastarOutput = r
 			return
 		else:
 			print("Got consesus on empty block")
@@ -570,7 +581,7 @@ class Node(object):
 
 
 	def BAstartCountVoteTwo(self,ev):
-		#print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
+		print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
 		step = ev.stepNumber
 		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
 		if r is TIMEOUT:
@@ -582,30 +593,45 @@ class Node(object):
 			#print("This is the final agreed value of hash (empty block hash) = ", r," round ends.")
 
 			# Push the next sortion event
+			self.bastarOutput = r
 			newEvent = Event(ev.evTime + 1,
 							 ev.evTime + 1,
-							 EventType.BLOCK_PROPOSER_SORTITION_EVENT,
+							 EventType.FINAL_COUNT_VOTE,
 							 noMessage(),
 							 TIMEOUT_NOT_APPLICABLE,
 							 self,
 							 self,
-							 ev.roundNumber + 1,
-							 0)  # Initial step Number
-
+							 ev.roundNumber,
+							 FINAL_STEP)
 
 			eventQ.add(newEvent)
-
-			self.bastarOutput = r
 			return
 
 		step += 1
 		# Try to vote on a empty block
 		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_THREE,r)
 
+	def finalCountVote(self,ev):
+		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
+		if r == self.bastarOutput:
+			pass # add the Block corresponding to this hash
+		else:
+			pass # add the Block corresponding to this hash
+		newEvent = Event(ev.evTime + 1,
+							ev.evTime + 1,
+							EventType.BLOCK_PROPOSER_SORTITION_EVENT,
+							noMessage(),
+							TIMEOUT_NOT_APPLICABLE,
+							self,
+							self,
+							ev.roundNumber + 1,
+							0)
 
+		eventQ.add(newEvent)		
+		
 
 	def BAstartCountVoteThree(self,ev):
-		#print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
+		print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
 		step = ev.stepNumber
 		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
 		if r is TIMEOUT:

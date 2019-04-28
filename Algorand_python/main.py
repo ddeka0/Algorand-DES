@@ -34,6 +34,8 @@ def executeEvent(ev):
 		targetNode.BAstartCountVoteTwo(ev)
 	elif eventType == EventType.BASTAR_COUNT_VOTE_THREE:
 		targetNode.BAstartCountVoteThree(ev)
+	elif eventType == EventType.FINAL_COUNT_VOTE:
+		targetNode.finalCountVote(ev)
 	else:
 		print("Event Type is not recognised")
 
