@@ -1,4 +1,5 @@
 # !/bin/python3
+# TODO make incomingBlockVoteMsg as dictionary and index with it (round,step)
 from event import Event
 from network_utils import*
 from multiprocessing import  Pool,cpu_count
@@ -15,7 +16,8 @@ class Node(object):
 		self.priorityGossipFound = False
 		self.priorityList = []
 		self.tau = MAX_NODES * 0.1 # 10 percent
-		self.tau_committee = MAX_NODES * 0.5  # 10 percent
+		#self.tau = 5  # 10 percent
+		self.tau_committee = tou_step  # 20 percent
 		self.W = MAX_NODES * (MAX_ALGORAND / 2)
 		self.lastGossipMessage = ""
 		self.sentGossipMessages = []
@@ -308,7 +310,7 @@ class Node(object):
 
 		results = list(Pool(processes=nprocs).map(partial(self.ProcessMsg,ctx_Weight),msgs))
 
-		print("len of the result = ", len(results))
+		print(self.nodeId," processed ",len(results)," block vote messages")
 
 		# Clear the incoming VoteMessage list
 		# Could be used in the next step again
@@ -325,10 +327,11 @@ class Node(object):
 			else:
 				counts[value] = votes
 			if counts[value] >= math.floor(Tstep * self.tau_committee): # TODO check this condition fully
-				print("found ", counts[value], " expected ", math.floor(Tstep * self.tau_committee))
+				#print("found ", counts[value], " expected ", math.floor(Tstep * self.tau_committee))
 				return value
 			else:
-				print("found ",counts[value]," expected ",math.floor(Tstep * self.tau_committee))
+				#print("found ",counts[value]," expected ",math.floor(Tstep * self.tau_committee))
+				pass
 		return None
 
 
@@ -429,7 +432,7 @@ class Node(object):
 
 
 	def BAstartCommitteVote(self,ev,roundNumber,stepNumber,touCommitte,flag,block_hash):
-		if stepNumber >= MAX_STEPS:
+		if flag == INVOKE_BA_START_COUNT_VOTE_ONE and stepNumber >= MAX_STEPS:
 			return
 
 		# flag will decide which countVote event to push after this committe vote is over
@@ -471,7 +474,8 @@ class Node(object):
 		else:
 			print(self.nodeId," lose the ",roundNumber," round and ",stepNumber," step of committe vote")
 			pass
-
+		# TODO all of the following timeout valus are not correct
+		# TODO these are somehow working only
 		if flag == INVOKE_BA_START_COUNT_VOTE_ONE:
 			# Push the reduction step 2 cound vote event after +3 sec
 			newEvent2 = Event(ev.evTime + BA_STAR_GOSSIP_TIMEOUT + 1,
@@ -514,7 +518,7 @@ class Node(object):
 			print(self.nodeId, " Unknown flag received")
 
 	def BAstartCountVoteOne(self,ev):
-		print(self.nodeId, " BA* Count Vote ONE is executing ....")
+		print(self.nodeId, " BA* Count Vote ONE is executing in step = ",ev.stepNumber)
 		step = ev.stepNumber
 		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev) # TODO T_STEP check
 		if r is TIMEOUT:
@@ -525,7 +529,7 @@ class Node(object):
 				self.BAstartCommitteVote(ev,ev.roundNumber,s,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)
 			if step == 3:
 				self.BAstartCommitteVote(ev,ev.roundNumber,FINAL_STEP,tou_final,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)	# use a committe vote
-			print("This is the final return value of hash = ",r)
+			print("This is the final agreed value of hash = ",r," round ends.")
 			return
 		else:
 			print("Got consesus on empty block")
@@ -536,12 +540,55 @@ class Node(object):
 
 
 	def BAstartCountVoteTwo(self,ev):
-		print("BA* Count Vote two is executing ....")
+		print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
+		step = ev.stepNumber
+		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
+		if r is TIMEOUT:
+			r = self.getEmptyHash()
+		elif r == self.getEmptyHash():
+			for s in range(ev.stepNumber,ev.stepNumber + 3):
+				# vote on the empty block
+				self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)
+			print("This is the final agreed value of hash (empty block hash) = ", r," round ends.")
+			return
+
+		step += 1
+		# Try to vote on a empty block
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_THREE,r)
+
 
 
 	def BAstartCountVoteThree(self,ev):
-		print("BA* Count Vote three is executing ....")
+		print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
+		step = ev.stepNumber
+		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
+		if r is TIMEOUT:
+			if self.commonCoin(ev.roundNumber,step,tou_step) == 0:
+				r = self.bastarBlockHash
+			else:
+				r = self.getEmptyHash()
 
+		step += 1
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_ONE,r)
+
+
+	def commonCoin(self,roundNumber,stepNumber,touStep):
+		minHash = 2**512
+		msgs = self.incomingBlockVoteMsg
+		nprocs = cpu_count()
+		results = list(Pool(processes=nprocs).map(partial(self.ProcessMsg, ctx_Weight), msgs))
+		print(self.nodeId, " processed ", len(results), " block vote messages for common coin")
+
+		self.incomingBlockVoteMsg.clear()
+
+		for res in results:
+			votes, value,sortHash, pk = res
+			for j in range(0,votes):
+				h = H(str(sortHash) + str(j))  # TODO check the type of sortHash
+				if h < minHash:
+					minHash = h
+
+		return minHash % 2
 
 	def computePriority(self,resp):
 		hashList = []
@@ -561,6 +608,7 @@ class Node(object):
 		retval = Sortition(self.secretkey,self.seed,self.tau,"hello",self.w,self.W)
 		resp = srtnResp(retval[0],retval[1],retval[2])
 		if resp.j > 0:
+			print(self.nodeId, " I am a possible proposer")
 			minPrio = self.computePriority(resp) # min --> max in algorand
 			newPriorityMsg = priorityMessage(GossipType.PRIORITY_GOSSIP,
 										ev.roundNumber,

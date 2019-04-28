@@ -50,7 +50,7 @@ def VerifySort(pk, hashValue, pi, seed, tau, role, w, W,jj):
 			else:
 				break
 	if j != jj:
-		print("vvvvvvvvvvvvvvvvvvvv")
+		print("tou proposer mis match may be !!")
 	return j
 
 def Sortition(sk, seed, tauProposer, role, w, W):
