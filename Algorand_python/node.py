@@ -3,6 +3,7 @@ from event import Event
 from network_utils import*
 from multiprocessing import  Pool,cpu_count
 from functools import partial
+import math
 
 class Node(object):
 	def __init__(self, Id, secretkey, publickey, w):
@@ -26,6 +27,7 @@ class Node(object):
 
 		self.incomingProposedBlocks = []	# this queue will be used for incoming block prop messages
 		self.incomingBlockVoteMsg = []		# this queue will be used for incoming vote block message
+		self.bastarBlockHash = None
 
 	def __str__(self):
 		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
@@ -254,8 +256,8 @@ class Node(object):
 
 			for peer in self.peerList:
 				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
-					if ev.stepNumber == REDUCTION_TWO or ev.stepNumber == 3:
-						print("Block Gossiped to ",peer.nodeId," by ",self.nodeId," at time  = ",ev.evTime)
+					#if ev.stepNumber == REDUCTION_TWO or ev.stepNumber == 3:
+					print("BlockVote Gossiped to ",peer.nodeId," by ",self.nodeId," at time  = ",ev.evTime)
 					self.sendMsg(ev,peer)
 				else:
 					print("More Delay")
@@ -322,9 +324,11 @@ class Node(object):
 				counts[value] += votes
 			else:
 				counts[value] = votes
-			if counts[value] > Tstep * self.tau_committee:
+			if counts[value] >= math.floor(Tstep * self.tau_committee): # TODO check this condition fully
+				print("found ", counts[value], " expected ", math.floor(Tstep * self.tau_committee))
 				return value
-
+			else:
+				print("found ",counts[value]," expected ",math.floor(Tstep * self.tau_committee))
 		return None
 
 
@@ -407,25 +411,27 @@ class Node(object):
 		if hBlockTwo is not None:
 			print(self.nodeId, "Got anough vote for ", hBlockTwo)
 		else:
-			print(self.nodeId, "Got hBlockOne TIMEOUT")
+			print(self.nodeId, "Got hBlockTwo TIMEOUT")
 
 		hblockInputToBAstar = None
 		if hBlockTwo == TIMEOUT:
 			hblockInputToBAstar = self.getEmptyHash()
 		else:
 			hblockInputToBAstar = hBlockTwo
+		self.bastarBlockHash = hblockInputToBAstar
 
-		self.BAstarPhaseOne(ev,3,hblockInputToBAstar)
+		self.BAstarPhaseOne(ev,3)
 
-	def BAstarPhaseOne(self,ev,stepNumber,block_hash):
+
+	def BAstarPhaseOne(self,ev,stepNumber):
 		print("BA* phase 1 started step = ",ev.stepNumber)
-		if stepNumber < MAX_STEPS:
-			self.BAstartCommitteVote(ev,ev.roundNumber,stepNumber,tou_step,block_hash,1)
-		else:
-			self.hangForever()
+		self.BAstartCommitteVote(ev,ev.roundNumber,stepNumber,tou_step,INVOKE_BA_START_COUNT_VOTE_ONE,self.bastarBlockHash)
 
 
-	def BAstartCommitteVote(self,ev,roundNumber,stepNumber,touCommitte,hBlock,flag):
+	def BAstartCommitteVote(self,ev,roundNumber,stepNumber,touCommitte,flag,block_hash):
+		if stepNumber >= MAX_STEPS:
+			return
+
 		# flag will decide which countVote event to push after this committe vote is over
 		# TODO passing ev or not to pass # anyway its working
 		# clearing is important
@@ -436,10 +442,10 @@ class Node(object):
 		resp = srtnResp(retval[0], retval[1], retval[2])  # TODO remove
 		if resp.j > 0:  # If I have own the committe
 			# push a gossip event on myself that will trigger further gossip
-			print(self.nodeId, " Reduction step2 starts and I am a committe member with j = ", resp.j)
+			print(self.nodeId, "BA* step ",stepNumber,"and round =",roundNumber," : selected as committe member with j = ", resp.j)
 			prevBlock = self.blockChain[len(self.blockChain) - 1]
 			prevBlockHash = H(prevBlock)
-			thisBlockHash = hBlock  # this could be empty or non empty also
+			thisBlockHash = block_hash  # this could be empty or non empty also
 
 			blockVoteMsg = BlockVoteMsg(self.publickey,
 										self.secretkey,
@@ -463,10 +469,10 @@ class Node(object):
 
 			eventQ.add(newEvent)
 		else:
-			print(self.nodeId," lose the second round of committe vote")
+			print(self.nodeId," lose the ",roundNumber," round and ",stepNumber," step of committe vote")
 			pass
 
-		if flag == 1:
+		if flag == INVOKE_BA_START_COUNT_VOTE_ONE:
 			# Push the reduction step 2 cound vote event after +3 sec
 			newEvent2 = Event(ev.evTime + BA_STAR_GOSSIP_TIMEOUT + 1,
 							  ev.evTime + BA_STAR_GOSSIP_TIMEOUT + 1,
@@ -478,7 +484,7 @@ class Node(object):
 							  roundNumber,
 							  stepNumber)  # step = 1
 			eventQ.add(newEvent2)
-		elif flag == 2:
+		elif flag == INVOKE_BA_START_COUNT_VOTE_TWO:
 			# Push the reduction step 2 cound vote event after +3 sec
 			newEvent2 = Event(ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
 							  ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
@@ -488,9 +494,9 @@ class Node(object):
 							  self,
 							  self,
 							  roundNumber,
-							  stepNumber)  # step = 1
+							  stepNumber)
 			eventQ.add(newEvent2)
-		elif flag == 3:
+		elif flag == INVOKE_BA_START_COUNT_VOTE_THREE:
 			# Push the reduction step 2 cound vote event after +3 sec
 			newEvent2 = Event(ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
 							  ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
@@ -500,12 +506,33 @@ class Node(object):
 							  self,
 							  self,
 							  roundNumber,
-							  stepNumber)  # step = 1
+							  stepNumber)
 			eventQ.add(newEvent2)
-
+		elif flag == DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE:
+			print(self.nodeId," Not creating any more count vote step ", ev.roundNumber," ends.")
+		else:
+			print(self.nodeId, " Unknown flag received")
 
 	def BAstartCountVoteOne(self,ev):
-		print("BA* Count Vote one is executing ....")
+		print(self.nodeId, " BA* Count Vote ONE is executing ....")
+		step = ev.stepNumber
+		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev) # TODO T_STEP check
+		if r is TIMEOUT:
+			r = self.bastarBlockHash # we are using self.bastarBlockHash instead of block_hash
+			print("BAstartCountVoteOne getting timeout")
+		elif r != self.getEmptyHash():
+			for s in range(ev.stepNumber,ev.stepNumber + 3):
+				self.BAstartCommitteVote(ev,ev.roundNumber,s,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)
+			if step == 3:
+				self.BAstartCommitteVote(ev,ev.roundNumber,FINAL_STEP,tou_final,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)	# use a committe vote
+			print("This is the final return value of hash = ",r)
+			return
+		else:
+			print("Got consesus on empty block")
+			print("Need to move forward")
+
+		step += 1
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_TWO,r)
 
 
 	def BAstartCountVoteTwo(self,ev):
