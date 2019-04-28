@@ -28,7 +28,7 @@ class Node(object):
 		self.blockChain.append(genesisBlock)
 
 		self.incomingProposedBlocks = []	# this queue will be used for incoming block prop messages
-		self.incomingBlockVoteMsg = []		# this queue will be used for incoming vote block message
+		self.incomingBlockVoteMsg = {}		# this queue will be used for incoming vote block message
 		self.bastarBlockHash = None
 		self.bastarOutput = None
 
@@ -185,7 +185,8 @@ class Node(object):
 		self.sentGossipMessages.clear()
 
 		if len(self.incomingProposedBlocks) == 0:
-			print(self.nodeId ,"Reduction step1 starts and I should vote on an empty block") # TODO implement
+			#print(self.nodeId ,"Reduction step1 starts and I should vote on an empty block") # TODO implement
+			pass
 		else:
 			# Find block from max priority proposer only and vote on it
 			minPrio = 2**300
@@ -201,7 +202,7 @@ class Node(object):
 			resp = srtnResp(retval[0],retval[1],retval[2]) # TODO remove
 			if resp.j > 0: # If I have own the committe
 				# push a gossip event on myself that will trigger further gossip
-				print(self.nodeId, " Reduction step1 starts and I am a committe member with j = ",resp.j)
+				#print(self.nodeId, " Reduction step1 starts and I am a committe member with j = ",resp.j)
 				prevBlock = self.blockChain[len(self.blockChain) - 1]
 				prevBlockHash = hashlib.sha256(prevBlock.__str__().encode()).hexdigest()
 				thisBlockHash = hashlib.sha256(maxPropBlockMsg.block.__str__().encode()).hexdigest()
@@ -247,7 +248,10 @@ class Node(object):
 		# this incomingProposedBlock will be used in the reductionCommitteVoteStepOne() function
 		if ev.msgToDeliver not in self.sentGossipMessages:
 			message = ev.msgToDeliver
-			self.incomingBlockVoteMsg.append(message)
+
+			if ev.getRoundStepTuple() not in self.incomingBlockVoteMsg:
+				self.incomingBlockVoteMsg[ev.getRoundStepTuple()]=[]
+			self.incomingBlockVoteMsg[ev.getRoundStepTuple()].append(message)
 
 			randomNodeCnt = 0
 
@@ -281,6 +285,7 @@ class Node(object):
 		j = m.j
 
 		# TODO use fastecdsa
+
 		if not pk.verify(signed_m, str((msg)).encode('utf-8')):
 			print("Verification Failed")
 			return tuple((0,False,False))
@@ -302,8 +307,11 @@ class Node(object):
 
 	def CountVotes(self, Tstep ,ev):
 		counts = {}
-		msgs = self.incomingBlockVoteMsg
-		print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",len(self.incomingBlockVoteMsg))
+		#msgs = self.incomingBlockVoteMsg
+		msgs = []
+		if ev.getRoundStepTuple() in self.incomingBlockVoteMsg:
+			msgs = self.incomingBlockVoteMsg[ev.getRoundStepTuple()]
+		#print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",len(msgs))
 		#print(self.nodeId," found ",len(msgs)," no of incoming vote messages")
 		voters = []
 		# TODO parallelize the following while loop
@@ -312,12 +320,14 @@ class Node(object):
 
 		results = list(Pool(processes=nprocs).map(partial(self.ProcessMsg,ctx_Weight),msgs))
 
-		print(self.nodeId," processed ",len(results)," block vote messages")
+		# print(self.nodeId," processed ",len(results)," block vote messages")
 
 		# Clear the incoming VoteMessage list
 		# Could be used in the next step again
-		self.incomingBlockVoteMsg.clear()
-
+		#self.incomingBlockVoteMsg.clear()
+		if ev.getRoundStepTuple() in self.incomingBlockVoteMsg:
+			self.incomingBlockVoteMsg[ev.getRoundStepTuple()].clear()
+		
 		for res in results:
 			votes, value, sortHasg, pk = res
 
@@ -343,11 +353,12 @@ class Node(object):
 		#print(self.nodeId ," has started Count Vote in reduction step one")
 		#self.CountVotes(T_STEP_REDUCTION_STEP_ONE, ev)
 		hBlockOne = self.CountVotes(T_STEP_REDUCTION_STEP_ONE,ev)
-		print("Reduction step2 starts...")
+		#print("Reduction step2 starts...")
 		if hBlockOne is not None:
 			print(self.nodeId ,"Got anough vote for ", hBlockOne)
 		else:
-			print(self.nodeId, "Got hBlockOne TIMEOUT")
+			#print(self.nodeId, "Got hBlockOne TIMEOUT")
+			pass
 
 		prevBlock = self.blockChain[len(self.blockChain) - 1]
 		prevBlockHash = H(prevBlock)
@@ -411,7 +422,7 @@ class Node(object):
 		eventQ.add(newEvent2)
 
 	def reductionCountVoteStepTwo(self,ev):
-		print("Reduction step2 Count Vote started at time ", ev.evTime)
+		#print("Reduction step2 Count Vote started at time ", ev.evTime)
 		hBlockTwo = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)
 		if hBlockTwo is not None:
 			print(self.nodeId, "Got anough vote for ", hBlockTwo)
@@ -429,7 +440,7 @@ class Node(object):
 
 
 	def BAstarPhaseOne(self,ev,stepNumber):
-		print("BA* phase 1 started step = ",ev.stepNumber)
+		#print("BA* phase 1 started step = ",ev.stepNumber)
 		self.BAstartCommitteVote(ev,ev.roundNumber,stepNumber,tou_step,INVOKE_BA_START_COUNT_VOTE_ONE,self.bastarBlockHash)
 
 
@@ -522,18 +533,18 @@ class Node(object):
 			pass
 
 	def BAstartCountVoteOne(self,ev):
-		print(self.nodeId, " BA* Count Vote ONE is executing in step = ",ev.stepNumber)
+		#print(self.nodeId, " BA* Count Vote ONE is executing in step = ",ev.stepNumber)
 		step = ev.stepNumber
 		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev) # TODO T_STEP check
 		if r is TIMEOUT:
 			r = self.bastarBlockHash # we are using self.bastarBlockHash instead of block_hash
-			print("BAstartCountVoteOne getting timeout")
+			#print("BAstartCountVoteOne getting timeout")
 		elif r != self.getEmptyHash():
 			for s in range(ev.stepNumber,ev.stepNumber + 3):
 				self.BAstartCommitteVote(ev,ev.roundNumber,s,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)
 			if step == 3:
 				self.BAstartCommitteVote(ev,ev.roundNumber,FINAL_STEP,tou_final,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)	# use a committe vote
-			print("This is the final agreed value of hash = ",r," round ends.")
+			#print("This is the final agreed value of hash = ",r," round ends.")
 
 			# Push the next sortion event
 			#Push the next sortion event
@@ -559,7 +570,7 @@ class Node(object):
 
 
 	def BAstartCountVoteTwo(self,ev):
-		print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
+		#print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
 		step = ev.stepNumber
 		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
 		if r is TIMEOUT:
@@ -568,7 +579,7 @@ class Node(object):
 			for s in range(ev.stepNumber,ev.stepNumber + 3):
 				# vote on the empty block
 				self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)
-			print("This is the final agreed value of hash (empty block hash) = ", r," round ends.")
+			#print("This is the final agreed value of hash (empty block hash) = ", r," round ends.")
 
 			# Push the next sortion event
 			newEvent = Event(ev.evTime + 1,
@@ -594,7 +605,7 @@ class Node(object):
 
 
 	def BAstartCountVoteThree(self,ev):
-		print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
+		#print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
 		step = ev.stepNumber
 		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
 		if r is TIMEOUT:
@@ -609,12 +620,18 @@ class Node(object):
 
 	def commonCoin(self,roundNumber,stepNumber,touStep):
 		minHash = 2**512
-		msgs = self.incomingBlockVoteMsg
+		#msgs = self.incomingBlockVoteMsg
+		msgs = []
+		if (roundNumber,stepNumber) in self.incomingBlockVoteMsg:
+			msgs = self.incomingBlockVoteMsg[(roundNumber,stepNumber)]
 		nprocs = cpu_count()
 		results = list(Pool(processes=nprocs).map(partial(self.ProcessMsg, ctx_Weight), msgs))
 		print(self.nodeId, " processed ", len(results), " block vote messages for common coin")
 
-		self.incomingBlockVoteMsg.clear()
+
+		#self.incomingBlockVoteMsg.clear()
+		if (roundNumber,stepNumber) in self.incomingBlockVoteMsg:
+			self.incomingBlockVoteMsg[(roundNumber,stepNumber)].clear()
 
 		for res in results:
 			votes, value,sortHash, pk = res
@@ -644,6 +661,12 @@ class Node(object):
 		self.peerList.clear()
 		self.sentGossipMessages.clear()
 		self.incomingBlockVoteMsg.clear()
+
+		# TODO clear all list from all keys
+
+		# if ev.getRoundStepTuple() in self.incomingBlockVoteMsg:
+		# 	self.incomingBlockVoteMsg[ev.getRoundStepTuple()].clear()
+
 		self.incomingProposedBlocks.clear()
 
 		self.genNextSeed(ev.roundNumber,ev.stepNumber) # self.seed gets updated

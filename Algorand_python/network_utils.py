@@ -18,7 +18,7 @@ pk_List = []
 w_list = []
 ctx_Weight = {}
 
-MAX_NODES = 10
+MAX_NODES = 50
 TIMEOUT = None
 
 REDUCTION_TWO = 2
