@@ -1,4 +1,9 @@
 import random
+from ecdsa import SigningKey ,NIST256p
+import matplotlib.pyplot as plt
+
+
+
 # returns nCr
 def nCr(n, r):
 	return fact(n) // (fact(r) * fact(n - r))
@@ -79,3 +84,82 @@ def Sortition(sk, seed, tauProposer, role, w, W):
 		else:
 			break
 	return tuple((VRFhash,pi,j))
+
+
+
+
+def test_Sortition():
+
+	final = {}
+	sk_List = []
+	pk_List = []
+	NODES = 256
+	MAX_MONEY = 50
+	ROUNDS = 64
+	tau_proposer = 64
+	W = NODES * (MAX_MONEY/2)
+
+	w = []
+	j = [0] * NODES
+
+	for i in range(NODES):
+		w.append(random.randint(1,50))
+
+
+	for i in range(NODES):  # 200
+		sk_List.append(SigningKey.generate(curve=NIST256p))
+
+
+	for i in range(ROUNDS):
+		for k in range(NODES):  # 200
+			retval = (Sortition(sk_List[k],"THIS IS BEST BLOCK ALGORAND SIMULATOR",tau_proposer,"ROLE",w[k],W))
+			j[k] += retval[2]
+		print("Current Round = ",i+1)
+
+	c = 0
+	# for i in w:
+	# 	if i in final:
+	# 		final[i] += j[c]
+	# 	else:
+	# 		final[i] = j[c]
+	# 	c += 1
+	for i in range(len(j)):
+		j[i] = j[i]/ROUNDS
+
+	print(j)
+	print(w)
+
+	for i in w:
+		if i in final:
+			final[i] += j[c]
+			#final[i].append(j[c])
+		else:
+			final[i] = j[c]
+			#final[i] = []
+			#final[i].append(j[c])
+		c += 1
+
+	temp={}
+	for k,v in final.items():
+		final[k] = v/ROUNDS
+		#temp[k]= sum(final[k])/len(final[k])
+
+	print(sum(temp.values()))
+
+	plt.xlabel('stakes')
+	# frequency label
+	plt.ylabel('avg sub-user')
+	# plot title
+	plt.title('My bar plot!')
+	# showing legend
+	plt.legend()
+
+	print(final)
+	plt.bar(final.keys(), final.values(), label="line 1",)
+	plt.show()
+
+# test_Sortition()
+
+
+
+
