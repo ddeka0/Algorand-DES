@@ -28,7 +28,7 @@ class Node(object):
 		self.blockChain.append(genesisBlock)
 
 		self.incomingProposedBlocks = []	# this queue will be used for incoming block prop messages
-		self.incomingBlockVoteMsg = []		# this queue will be used for incoming vote block message
+		self.incomingBlockVoteMsg = {}		# this queue will be used for incoming vote block message
 		self.bastarBlockHash = None
 		self.bastarOutput = None
 
@@ -247,7 +247,10 @@ class Node(object):
 		# this incomingProposedBlock will be used in the reductionCommitteVoteStepOne() function
 		if ev.msgToDeliver not in self.sentGossipMessages:
 			message = ev.msgToDeliver
-			self.incomingBlockVoteMsg.append(message)
+
+			if ev.getRoundStepTuple() not in self.incomingBlockVoteMsg:
+				self.incomingBlockVoteMsg[ev.getRoundStepTuple()]=[]
+			self.incomingBlockVoteMsg[ev.getRoundStepTuple()].append(message)
 
 			randomNodeCnt = 0
 
@@ -302,8 +305,11 @@ class Node(object):
 
 	def CountVotes(self, Tstep ,ev):
 		counts = {}
-		msgs = self.incomingBlockVoteMsg
-		print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",len(self.incomingBlockVoteMsg))
+		#msgs = self.incomingBlockVoteMsg
+		msgs = []
+		if ev.getRoundStepTuple() in self.incomingBlockVoteMsg:
+			msgs = self.incomingBlockVoteMsg[ev.getRoundStepTuple()]
+		print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",len(msgs))
 		#print(self.nodeId," found ",len(msgs)," no of incoming vote messages")
 		voters = []
 		# TODO parallelize the following while loop
@@ -316,8 +322,10 @@ class Node(object):
 
 		# Clear the incoming VoteMessage list
 		# Could be used in the next step again
-		self.incomingBlockVoteMsg.clear()
-
+		#self.incomingBlockVoteMsg.clear()
+		if ev.getRoundStepTuple() in self.incomingBlockVoteMsg:
+			self.incomingBlockVoteMsg[ev.getRoundStepTuple()].clear()
+		
 		for res in results:
 			votes, value, sortHasg, pk = res
 
@@ -609,12 +617,18 @@ class Node(object):
 
 	def commonCoin(self,roundNumber,stepNumber,touStep):
 		minHash = 2**512
-		msgs = self.incomingBlockVoteMsg
+		#msgs = self.incomingBlockVoteMsg
+		msgs = []
+		if (roundNumber,stepNumber) in self.incomingBlockVoteMsg:
+			msgs = self.incomingBlockVoteMsg[(roundNumber,stepNumber)]
 		nprocs = cpu_count()
 		results = list(Pool(processes=nprocs).map(partial(self.ProcessMsg, ctx_Weight), msgs))
 		print(self.nodeId, " processed ", len(results), " block vote messages for common coin")
 
-		self.incomingBlockVoteMsg.clear()
+
+		#self.incomingBlockVoteMsg.clear()
+		if (roundNumber,stepNumber) in self.incomingBlockVoteMsg:
+			self.incomingBlockVoteMsg[(roundNumber,stepNumber)].clear()
 
 		for res in results:
 			votes, value,sortHash, pk = res
@@ -643,7 +657,9 @@ class Node(object):
 
 		self.peerList.clear()
 		self.sentGossipMessages.clear()
-		self.incomingBlockVoteMsg.clear()
+		#self.incomingBlockVoteMsg.clear()
+		if ev.getRoundStepTuple() in self.incomingBlockVoteMsg:
+			self.incomingBlockVoteMsg[ev.getRoundStepTuple()].clear()
 		self.incomingProposedBlocks.clear()
 
 		self.genNextSeed(ev.roundNumber,ev.stepNumber) # self.seed gets updated

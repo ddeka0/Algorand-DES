@@ -16,3 +16,6 @@ class Event(object):
 
     def __str__(self):
         return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
+    
+    def getRoundStepTuple(self):
+        return (self.roundNumber,self.stepNumber)
