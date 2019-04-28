@@ -33,10 +33,10 @@ def PRG(seed):
 
 
 def VerifySort(pk, hashValue, pi, seed, tau, role, w, W,jj):
+
 	if not pk.verify(hashValue, str((pi)).encode('utf-8')):
 		return 0
 	else:
-
 		hashval = hashValue.hex()
 		p = tau / W
 		j = 0
@@ -54,6 +54,7 @@ def VerifySort(pk, hashValue, pi, seed, tau, role, w, W,jj):
 				j = j + 1
 			else:
 				break
+
 	if j != jj:
 		print("tou proposer mis match may be !!")
 	return j
