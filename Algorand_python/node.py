@@ -48,9 +48,6 @@ class Node(object):
 						event.stepNumber)
 
 		eventQ.add(newEvent)
-		#print("Pushed gossip event at time ",event.evTime + delays[self.nodeId][dstNode.nodeId])
-		#print("Msg sent to (gossip message) ",dstNode.nodeId)
-
 
 	def genNextSeed(self,roundNumber,stepNumber):
 		prevBlock = self.blockChain[len(self.blockChain) - 1]
@@ -59,9 +56,6 @@ class Node(object):
 
 
 	def sendPriorityGossip(self,ev):
-		#print("Round Number = ",ev.round)
-		#print("Executing sendGossip at ",self.nodeId)
-		#print("Message is :")
 		if ev.msgToDeliver not in self.sentGossipMessages:
 			message = ev.msgToDeliver
 			if message.gossipType == GossipType.PRIORITY_GOSSIP:
@@ -81,18 +75,14 @@ class Node(object):
 				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
 					self.sendMsg(ev,peer)
 				else:
-					#print("NOT good delay")
 					pass
 			self.peerList.clear()
 			self.lastGossipMessage = message.__str__() # not very perfect but still stops some messages
 			self.sentGossipMessages.append(message)
 		else:
 			pass
-			#print("Message Discarded : already sent via this Node [",self.nodeId,"]")
 
 	def selectTopProposer(self,ev):
-		# clear the record of outgoing priority gossip messages
-		# we are going to push new block propose gossip message in this list
 		self.sentGossipMessages.clear()
 		
 		IamTopProposer = None
@@ -172,7 +162,7 @@ class Node(object):
 					#print("Block Gossiped to ",peer.nodeId," by ",self.nodeId," at time  = ",ev.evTime)
 					self.sendMsg(ev,peer)
 				else:
-					print("More Delay")
+					pass
 
 			self.peerList.clear()
 			self.sentGossipMessages.append(message)
@@ -318,9 +308,9 @@ class Node(object):
 		# TODO parallelize the following while loop
 
 		nprocs = cpu_count()
-
+		pool = Pool(nprocs)
 		results = list(Pool(processes=nprocs).map(partial(self.ProcessMsg,ctx_Weight),msgs))
-
+		pool.close()
 		# print(self.nodeId," processed ",len(results)," block vote messages")
 
 		# Clear the incoming VoteMessage list
@@ -610,12 +600,12 @@ class Node(object):
 		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
 		if r == self.bastarOutput:
 			self.blockChain.append(self.bastarBlock)
-			print(">>>>>>>>>>>>>[FINAL]New Block added with hash = ",H(self.bastarBlock))
+			print(">>>>>>>>>>>>>[FINAL]New Block added with hash = ",H(self.bastarBlock), " in round = ",ev.roundNumber)
 			if r == self.getEmptyHash():
 				print("Added block was empty")
 			# add final flag later
 		else:
-			print(">>>>>>>>>>>>>[TENTATIVE]New Block added with hash = ", H(self.bastarBlock))
+			print(">>>>>>>>>>>>>[TENTATIVE]New Block added with hash = ", H(self.bastarBlock), " in round = ",ev.roundNumber)
 			self.blockChain.append(self.bastarBlock)
 			if r == self.getEmptyHash():
 				print("Added block was empty")
@@ -659,9 +649,10 @@ class Node(object):
 		if (roundNumber,stepNumber) in self.incomingBlockVoteMsg:
 			msgs = self.incomingBlockVoteMsg[(roundNumber,stepNumber)]
 		nprocs = cpu_count()
-		results = list(Pool(processes=nprocs).map(partial(self.ProcessMsg, ctx_Weight), msgs))
+		pool = Pool(nprocs)
+		results = list(pool.map(partial(self.ProcessMsg, ctx_Weight), msgs))
 		print(self.nodeId, " processed ", len(results), " block vote messages for common coin")
-
+		pool.close()
 
 		#self.incomingBlockVoteMsg.clear()
 		if (roundNumber,stepNumber) in self.incomingBlockVoteMsg:

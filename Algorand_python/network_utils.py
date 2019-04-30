@@ -18,12 +18,12 @@ pk_List = []
 w_list = []
 ctx_Weight = {}
 
-MAX_NODES = 100
+MAX_NODES = 30
 TIMEOUT = None
 
 REDUCTION_TWO = 2
-tou_step = MAX_NODES * 0.5
-tou_final = MAX_NODES * 0.5
+tou_step = MAX_NODES * 0.2
+tou_final = MAX_NODES * 0.2
 
 FINAL_STEP  = 1000000
 
