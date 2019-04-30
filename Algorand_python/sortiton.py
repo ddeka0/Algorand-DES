@@ -27,31 +27,28 @@ def PRG(seed):
 	return hashValue
 
 
-def VerifySort(pk, hashValue, pi, seed, tau, role, w, W,jj):
+def VerifySort(pk, hashValue, pi, seed, tau, role, w, W):
 
-	if not pk.verify(hashValue, str((pi)).encode('utf-8')):
-		return 0
-	else:
-		hashval = hashValue.hex()
-		p = tau / W
-		j = 0
-		value = int(hashval,16) / (2 ** 512)
-		while j <= w:
-			leftlimit = 0
-			rightlimit = 0
-			for k in range(j):
-				leftlimit = leftlimit + B(k, w, p)
+	# if not pk.verify(hashValue, str((pi)).encode('utf-8')):
+	# 	return 0
+	# else:
+	hashval = hashValue.hex()
+	p = tau / W
+	j = 0
+	value = int(hashval,16) / (2 ** 512)
+	while j <= w:
+		leftlimit = 0
+		rightlimit = 0
+		for k in range(j):
+			leftlimit = leftlimit + B(k, w, p)
 
-			for k in range(j + 1):
-				rightlimit = rightlimit + B(k, w, p)
+		for k in range(j + 1):
+			rightlimit = rightlimit + B(k, w, p)
 
-			if leftlimit > value or value >= rightlimit:
-				j = j + 1
-			else:
-				break
-
-	if j != jj:
-		print("tou proposer mis match may be !!")
+		if leftlimit > value or value >= rightlimit:
+			j = j + 1
+		else:
+			break
 	return j
 
 def Sortition(sk, seed, tauProposer, role, w, W):

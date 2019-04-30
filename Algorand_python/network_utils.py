@@ -18,7 +18,7 @@ pk_List = []
 w_list = []
 ctx_Weight = {}
 
-MAX_NODES = 20
+MAX_NODES = 100
 TIMEOUT = None
 
 REDUCTION_TWO = 2
@@ -189,14 +189,14 @@ class VoteMsg(object):
 			+ "thisBlockHash = " + str(self.thisBlockHash)
 
 class BlockVoteMsg(object):
-	def __init__(self, userPk, userSk, roundNumber, step, hashValue, pi, prevBlockHash, thisBlockHash,j):
+	def __init__(self, userPk, userSk, roundNumber, step, hashValue, pi, prevBlockHash, thisBlockHash,block):
 		self.userPk = userPk
 		msg = VoteMsg(roundNumber, step, hashValue, pi, prevBlockHash, thisBlockHash)
 		digest = userSk.sign(str(msg).encode())
 		# sgnVoteMsg is a tuple consisting of digest and the actual VoteMsg
 		# actual VoteMsg : will be used for verification of the digest
 		self.sgnVoteMsg = (digest,msg)
-		self.j = j
+		self.block = block
 def H(block):
 	return (hashlib.sha256(str(block).encode())).hexdigest()
 

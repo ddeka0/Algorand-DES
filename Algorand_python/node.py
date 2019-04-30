@@ -31,6 +31,7 @@ class Node(object):
 		self.incomingBlockVoteMsg = {}		# this queue will be used for incoming vote block message
 		self.bastarBlockHash = None
 		self.bastarOutput = None
+		self.bastarBlock = None
 
 	def __str__(self):
 		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
@@ -215,7 +216,7 @@ class Node(object):
 											resp.pi,
 											prevBlockHash,
 											thisBlockHash,
-											resp.j)
+											maxPropBlockMsg.block)
 
 				newEvent = Event(ev.evTime,
 								ev.evTime,
@@ -282,7 +283,7 @@ class Node(object):
 		pk = m.userPk
 		signed_m = m.sgnVoteMsg[0] # index for digest sgnVoteMsg is tuple
 		msg = m.sgnVoteMsg[1] # index for msg
-		j = m.j
+		block = m.block
 
 		# TODO use fastecdsa
 
@@ -298,11 +299,11 @@ class Node(object):
 			value = msg.thisBlockHash
 			if hprev != H(self.blockChain[len(self.blockChain)-1]):
 				print("prev block hash mismatch")
-				return tuple((0,False,False))
+				return tuple((0,False,False,False,False))
 			else:
-				votes = VerifySort(pk,sortHash,pi,self.seed,self.tau_committee,"hello",ctxw[pk],self.W,j)
+				votes = VerifySort(pk,sortHash,pi,self.seed,self.tau_committee,"hello",ctxw[pk],self.W)
 				#print(self.nodeId," vote = ",votes)
-				return tuple((votes,value,sortHash,pk))
+				return tuple((votes,value,sortHash,pk,block))
 				#return 1
 
 	def CountVotes(self, Tstep ,ev):
@@ -329,7 +330,7 @@ class Node(object):
 			self.incomingBlockVoteMsg[ev.getRoundStepTuple()].clear()
 		
 		for res in results:
-			votes, value, sortHasg, pk = res
+			votes, value, sortHasg, pk, block = res
 
 			if pk in voters or votes == 0:
 				continue
@@ -340,11 +341,11 @@ class Node(object):
 				counts[value] = votes
 			if counts[value] >= math.floor(Tstep * self.tau_committee): # TODO check this condition fully
 				#print("found ", counts[value], " expected ", math.floor(Tstep * self.tau_committee))
-				return value
+				return (value,block)
 			else:
 				#print("found ",counts[value]," expected ",math.floor(Tstep * self.tau_committee))
 				pass
-		return None
+		return (None,None)
 
 
 
@@ -352,25 +353,18 @@ class Node(object):
 	def reductionCountVoteStepOne(self,ev):
 		#print(self.nodeId ," has started Count Vote in reduction step one")
 		#self.CountVotes(T_STEP_REDUCTION_STEP_ONE, ev)
-		hBlockOne = self.CountVotes(T_STEP_REDUCTION_STEP_ONE,ev)
+		hBlockOne,block = self.CountVotes(T_STEP_REDUCTION_STEP_ONE,ev)
 		#print("Reduction step2 starts...")
-		if hBlockOne is not TIMEOUT:
-			print(self.nodeId ,"Got anough vote for ", hBlockOne)
-		else:
-			#print(self.nodeId, "Got hBlockOne TIMEOUT")
-			pass
-
-		prevBlock = self.blockChain[len(self.blockChain) - 1]
-		prevBlockHash = H(prevBlock)
-		emptyBlock = Block("Empty",prevBlockHash)
 
 		if hBlockOne is TIMEOUT:
-			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,tou_step,H(emptyBlock))
+			block = self.getEmptyBlock()
+			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,tou_step,H(block),block)
 		else:
-			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,tou_step,hBlockOne)
+			print(self.nodeId, "Got anough vote for ", hBlockOne)
+			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,tou_step,hBlockOne,block)
 
 
-	def reductionCommitteVoteStepTwo(self,ev,roundNumber, stepNumber, touCommitte, hBlock):
+	def reductionCommitteVoteStepTwo(self,ev,roundNumber, stepNumber, touCommitte, hBlock,block):
 		# TODO passing ev or not to pass # anyway its working
 		# clearing is important
 		self.sentGossipMessages.clear()
@@ -393,7 +387,7 @@ class Node(object):
 										resp.pi,
 										prevBlockHash,
 										thisBlockHash,
-										resp.j)
+										block)
 
 			newEvent = Event(ev.evTime,
 							 ev.evTime,
@@ -423,28 +417,25 @@ class Node(object):
 
 	def reductionCountVoteStepTwo(self,ev):
 		#print("Reduction step2 Count Vote started at time ", ev.evTime)
-		hBlockTwo = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)
-		if hBlockTwo is not None:
-			print(self.nodeId, "Got anough vote for ", hBlockTwo)
-		else:
-			print(self.nodeId, "Got hBlockTwo TIMEOUT")
-
-		hblockInputToBAstar = None
+		hBlockTwo,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)
 		if hBlockTwo == TIMEOUT:
-			hblockInputToBAstar = self.getEmptyHash()
+			print(self.nodeId, "Got hBlockTwo TIMEOUT")
+			self.bastarBlockHash = self.getEmptyHash()
+			self.bastarBlock = self.getEmptyBlock()
 		else:
-			hblockInputToBAstar = hBlockTwo
-		self.bastarBlockHash = hblockInputToBAstar
+			print(self.nodeId, "Got anough vote for ", hBlockTwo)
+			self.bastarBlockHash = hBlockTwo
+			self.bastarBlock = block
 
 		self.BAstarPhaseOne(ev,3)
 
 
 	def BAstarPhaseOne(self,ev,stepNumber):
 		#print("BA* phase 1 started step = ",ev.stepNumber)
-		self.BAstartCommitteVote(ev,ev.roundNumber,stepNumber,tou_step,INVOKE_BA_START_COUNT_VOTE_ONE,self.bastarBlockHash)
+		self.BAstartCommitteVote(ev,ev.roundNumber,stepNumber,tou_step,INVOKE_BA_START_COUNT_VOTE_ONE,self.bastarBlockHash,self.bastarBlock)
 
 
-	def BAstartCommitteVote(self,ev,roundNumber,stepNumber,touCommitte,flag,block_hash):
+	def BAstartCommitteVote(self,ev,roundNumber,stepNumber,touCommitte,flag,block_hash,block):
 		if flag == INVOKE_BA_START_COUNT_VOTE_ONE and stepNumber >= MAX_STEPS:
 			return
 
@@ -471,7 +462,7 @@ class Node(object):
 										resp.pi,
 										prevBlockHash,
 										thisBlockHash,
-										resp.j)
+										block)
 
 			newEvent = Event(ev.evTime,
 							 ev.evTime,
@@ -535,15 +526,16 @@ class Node(object):
 	def BAstartCountVoteOne(self,ev):
 		print(self.nodeId, " BA* Count Vote ONE is executing in step = ",ev.stepNumber)
 		step = ev.stepNumber
-		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev) # TODO T_STEP check
+		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev) # TODO T_STEP check
 		if r is TIMEOUT:
 			r = self.bastarBlockHash # we are using self.bastarBlockHash instead of block_hash
 			#print("BAstartCountVoteOne getting timeout")
+			block = self.bastarBlock
 		elif r is not self.getEmptyHash():
 			for s in range(ev.stepNumber,ev.stepNumber + 3):
-				self.BAstartCommitteVote(ev,ev.roundNumber,s,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)
+				self.BAstartCommitteVote(ev,ev.roundNumber,s,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)
 			if step == 3:
-				self.BAstartCommitteVote(ev,ev.roundNumber,FINAL_STEP,tou_final,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)	# use a committe vote
+				self.BAstartCommitteVote(ev,ev.roundNumber,FINAL_STEP,tou_final,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)	# use a committe vote
 			#print("This is the final agreed value of hash = ",r," round ends.")
 
 			# Push the next sortion event
@@ -577,22 +569,25 @@ class Node(object):
 			print("Need to move forward")
 
 		step += 1
-		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_TWO,r)
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_TWO,r,block)
 
 
 	def BAstartCountVoteTwo(self,ev):
 		print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
 		step = ev.stepNumber
-		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
+		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
 		if r is TIMEOUT:
 			r = self.getEmptyHash()
+			block = self.getEmptyBlock()
 		elif r == self.getEmptyHash():
 			for s in range(ev.stepNumber,ev.stepNumber + 3):
 				# vote on the empty block
-				self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r)
+				# send an empty block also
+				block = self.getEmptyBlock()
+				self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)
 			#print("This is the final agreed value of hash (empty block hash) = ", r," round ends.")
 
-			# Push the next sortion event
+			# Push the Final count vote event
 			self.bastarOutput = r
 			newEvent = Event(ev.evTime + 1,
 							 ev.evTime + 1,
@@ -609,14 +604,25 @@ class Node(object):
 
 		step += 1
 		# Try to vote on a empty block
-		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_THREE,r)
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_THREE,r,block)
 
 	def finalCountVote(self,ev):
-		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
+		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
 		if r == self.bastarOutput:
-			pass # add the Block corresponding to this hash
+			self.blockChain.append(self.bastarBlock)
+			print(">>>>>>>>>>>>>[FINAL]New Block added with hash = ",H(self.bastarBlock))
+			if r == self.getEmptyHash():
+				print("Added block was empty")
+			# add final flag later
 		else:
-			pass # add the Block corresponding to this hash
+			print(">>>>>>>>>>>>>[TENTATIVE]New Block added with hash = ", H(self.bastarBlock))
+			self.blockChain.append(self.bastarBlock)
+			if r == self.getEmptyHash():
+				print("Added block was empty")
+			elif r == None:
+				print("#########################")
+			# add tentative flag later
+
 		newEvent = Event(ev.evTime + 1,
 							ev.evTime + 1,
 							EventType.BLOCK_PROPOSER_SORTITION_EVENT,
@@ -633,15 +639,17 @@ class Node(object):
 	def BAstartCountVoteThree(self,ev):
 		print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
 		step = ev.stepNumber
-		r = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
+		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
 		if r is TIMEOUT:
 			if self.commonCoin(ev.roundNumber,step,tou_step) == 0:
 				r = self.bastarBlockHash
+				block = self.bastarBlock
 			else:
 				r = self.getEmptyHash()
+				block = self.getEmptyBlock()
 
 		step += 1
-		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_ONE,r)
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_ONE,r,block)
 
 
 	def commonCoin(self,roundNumber,stepNumber,touStep):
@@ -660,7 +668,7 @@ class Node(object):
 			self.incomingBlockVoteMsg[(roundNumber,stepNumber)].clear()
 
 		for res in results:
-			votes, value,sortHash, pk = res
+			votes, value,sortHash, pk,block = res
 			for j in range(0,votes):
 				h = H(str(sortHash) + str(j))  # TODO check the type of sortHash
 				if h < minHash:
@@ -681,6 +689,12 @@ class Node(object):
 		prevBlock = self.blockChain[len(self.blockChain) - 1]
 		prevBlockHash = H(prevBlock)
 		return H(Block("Empty", prevBlockHash))
+
+	def getEmptyBlock(self):
+		prevBlock = self.blockChain[len(self.blockChain) - 1]
+		prevBlockHash = H(prevBlock)
+		return Block("Empty", prevBlockHash)
+
 
 	def proposePriority(self,ev):
 
