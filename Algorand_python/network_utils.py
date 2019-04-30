@@ -18,7 +18,7 @@ pk_List = []
 w_list = []
 ctx_Weight = {}
 
-MAX_NODES = 50
+MAX_NODES = 20
 TIMEOUT = None
 
 REDUCTION_TWO = 2
@@ -69,7 +69,7 @@ class EventType(Enum):
 	BASTAR_COUNT_VOTE_TWO = 9
 	BASTAR_COUNT_VOTE_THREE = 10
 
-
+	FINAL_COUNT_VOTE = 11
 
 class GossipType(Enum):
 	PRIORITY_GOSSIP					= 0
