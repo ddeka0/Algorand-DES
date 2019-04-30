@@ -159,6 +159,8 @@ def test_Sortition():
 	plt.bar(final.keys(), final.values(), label="line 1",)
 	plt.show()
 
+
+
 # test_Sortition()
 
 
