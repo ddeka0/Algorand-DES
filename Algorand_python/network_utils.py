@@ -17,8 +17,9 @@ sk_List = []
 pk_List = []
 w_list = []
 ctx_Weight = {}
+blockDelays=[]
 
-MAX_NODES = 30
+MAX_NODES = 100
 TIMEOUT = None
 
 REDUCTION_TWO = 2
@@ -110,6 +111,7 @@ class noMessage(object):
 def init_Delays():
 	global delays
 	global allNodes
+	global blockDelays
 
 	for i in range(MAX_NODES):
 		lz = [0] * MAX_NODES
@@ -123,6 +125,19 @@ def init_Delays():
 				normal_delay = np.random.normal(200,400,1)
 				normal_delay = list(normal_delay)[0]
 				delays[i.nodeId][j.nodeId] = max(MIN_DELAY,normal_delay)/DIVIDE_BY  # TODO: change value here
+
+	for i in range(MAX_NODES):
+		lz = [0] * MAX_NODES
+		blockDelays.append(lz)
+
+	for i in allNodes:
+		for j in allNodes:
+			if i == j:
+				blockDelays[i.nodeId][j.nodeId] = 0
+			else:
+				normal_delay = np.random.normal(30,64,1)
+				normal_delay = list(normal_delay)[0]
+				blockDelays[i.nodeId][j.nodeId] = max(MIN_DELAY,normal_delay)/DIVIDE_BY
 
 
 def init_AsymmtericKeys(listsk, listpk):

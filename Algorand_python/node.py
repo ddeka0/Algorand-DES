@@ -36,9 +36,9 @@ class Node(object):
 	def __str__(self):
 		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
 
-	def sendMsg(self,event,dstNode):
+	def sendMsg(self,event,dstNode,deltaTime):
 		newEvent = Event(event.refTime,
-						event.evTime + delays[self.nodeId][dstNode.nodeId],
+						event.evTime + deltaTime,
 						event.evType,
 						event.msgToDeliver,
 						event.timeOut,
@@ -72,8 +72,8 @@ class Node(object):
 					randomNodeCnt = randomNodeCnt + 1
 
 			for peer in self.peerList:
-				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
-					self.sendMsg(ev,peer)
+				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut: # delay non block
+					self.sendMsg(ev,peer,delays[self.nodeId][peer.nodeId])
 				else:
 					pass
 			self.peerList.clear()
@@ -158,9 +158,9 @@ class Node(object):
 					randomNodeCnt = randomNodeCnt + 1
 
 			for peer in self.peerList:
-				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
+				if ev.evTime + blockDelays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
 					#print("Block Gossiped to ",peer.nodeId," by ",self.nodeId," at time  = ",ev.evTime)
-					self.sendMsg(ev,peer)
+					self.sendMsg(ev,peer,blockDelays[self.nodeId][peer.nodeId])
 				else:
 					pass
 
@@ -256,7 +256,7 @@ class Node(object):
 				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
 					#if ev.stepNumber == REDUCTION_TWO or ev.stepNumber == 3:
 					#print("BlockVote Gossiped to ",peer.nodeId," by ",self.nodeId," at time  = ",ev.evTime)
-					self.sendMsg(ev,peer)
+					self.sendMsg(ev,peer,delays[self.nodeId][peer.nodeId])
 				else:
 					print("More Delay")
 
@@ -277,27 +277,27 @@ class Node(object):
 
 		# TODO use fastecdsa
 
-		if not pk.verify(signed_m, str((msg)).encode('utf-8')):
-			print("Verification Failed")
-			return tuple((0,False,False))
+		# if not pk.verify(signed_m, str((msg)).encode('utf-8')):
+		# 	print("Verification Failed")
+		# 	return tuple((0,False,False))
+		# else:
+		roundNumber = msg.roudNumber
+		step = msg.step
+		sortHash = msg.hashValue
+		pi = msg.pi
+		hprev = msg.prevBlockHash
+		value = msg.thisBlockHash
+		if hprev != H(self.blockChain[len(self.blockChain)-1]):
+			print("hprev is" ,hprev)
+			print("from blockchain" ,H(self.blockChain[len(self.blockChain)-1]))
+			#printBlockchain()
+			print("prev block hash mismatch")
+			return tuple((0,False,False,False,False))
 		else:
-			roundNumber = msg.roudNumber
-			step = msg.step
-			sortHash = msg.hashValue
-			pi = msg.pi
-			hprev = msg.prevBlockHash
-			value = msg.thisBlockHash
-			if hprev != H(self.blockChain[len(self.blockChain)-1]):
-				# print("hprev is" ,hprev)
-				# print("from blockchain" ,H(self.blockChain[len(self.blockChain)-1]))
-				#printBlockchain()
-				print("prev block hash mismatch")
-				return tuple((0,False,False,False,False))
-			else:
-				votes = VerifySort(pk,sortHash,pi,self.seed,self.tau_committee,"hello",ctxw[pk],self.W)
-				#print(self.nodeId," vote = ",votes)
-				return tuple((votes,value,sortHash,pk,block))
-				#return 1
+			votes = VerifySort(pk,sortHash,pi,self.seed,self.tau_committee,"hello",ctxw[pk],self.W)
+			#print(self.nodeId," vote = ",votes)
+			return tuple((votes,value,sortHash,pk,block))
+			#return 1
 
 	def printBlockchain(self):
 		for bc in self.blockChain:
@@ -453,6 +453,20 @@ class Node(object):
 
 	def BAstartCommitteVote(self,ev,roundNumber,stepNumber,touCommitte,flag,block_hash,block):
 		if flag == INVOKE_BA_START_COUNT_VOTE_ONE and stepNumber >= MAX_STEPS:
+			print("***********************************************")
+			self.bastarOutput = self.getEmptyHash()
+			self.bastarBlock = self.getEmptyBlock()
+			newEvent = Event(ev.evTime + 1,
+							ev.evTime + 1,
+							EventType.FINAL_COUNT_VOTE,
+							noMessage(),
+							TIMEOUT_NOT_APPLICABLE,
+							self,
+							self,
+							ev.roundNumber,
+							FINAL_STEP)
+
+			eventQ.add(newEvent)
 			return
 
 		# flag will decide which countVote event to push after this committe vote is over
@@ -633,10 +647,12 @@ class Node(object):
 
 			self.blockChain.append(self.bastarBlock)
 			print(">>>>>>>>>>>>>[FINAL",str(self.nodeId),"]New Block added with hash = ",H(self.bastarBlock), " in round = ",ev.roundNumber , " ev time " ,ev.evTime )
+			print(str(self.nodeId),"Block transaction ",self.bastarBlock.transactions )
 			
 			# add final flag later
 		else:
 			print(">>>>>>>>>>>>>[TENTATIVE",str(self.nodeId)," ]New Block added with hash = ", H(self.bastarBlock), " in round = ",ev.roundNumber , " ev time " , ev.evTime)
+			print(str(self.nodeId),"Block transaction ",self.bastarBlock.transactions )
 			if r == self.getEmptyHash():
 				print("Added block was empty")
 			self.blockChain.append(self.bastarBlock)
@@ -679,24 +695,31 @@ class Node(object):
 		minHash = 2**512
 		#msgs = self.incomingBlockVoteMsg
 		msgs = []
+
 		if (roundNumber,stepNumber) in self.incomingBlockVoteMsg:
 			msgs = self.incomingBlockVoteMsg[(roundNumber,stepNumber)]
-		nprocs = cpu_count()
-		pool = Pool(nprocs)
-		results = list(pool.map(partial(self.ProcessMsg, ctx_Weight), msgs))
-		print(self.nodeId, " processed ", len(results), " block vote messages for common coin")
-		pool.close()
+		
+		# nprocs = cpu_count()
+		# pool = Pool(nprocs)
+		# results = list(pool.map(partial(self.ProcessMsg, ctx_Weight), msgs))
+		# print(self.nodeId, " processed ", len(results), " block vote messages for common coin")
+		# pool.close()
 
-		#self.incomingBlockVoteMsg.clear()
+		while True:
+			try:
+				m = msgs.pop()
+				votes, value, sortHasg, pk, block = self.ProcessMsg(ctx_Weight,m)
+				for j in range(0,votes):
+					h = H(str(sortHash) + str(j))  # TODO check the type of sortHash
+					if int(h,16) < minHash:
+						minHash = h
+			except:
+				print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+				break
+			#pass
+
 		if (roundNumber,stepNumber) in self.incomingBlockVoteMsg:
 			self.incomingBlockVoteMsg[(roundNumber,stepNumber)].clear()
-
-		for res in results:
-			votes, value,sortHash, pk,block = res
-			for j in range(0,votes):
-				h = H(str(sortHash) + str(j))  # TODO check the type of sortHash
-				if int(h,16) < minHash:
-					minHash = h
 
 		return minHash % 2
 

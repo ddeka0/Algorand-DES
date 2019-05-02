@@ -57,7 +57,7 @@ if __name__ == "__main__":
 	#print(delays)
 	custom_time=0
 	for i in range(10):
-		custom_time = 200*i 
+		custom_time = 400*i 
 		for node in allNodes:
 			#print("pushed new event")
 			newEvent = Event(custom_time,
