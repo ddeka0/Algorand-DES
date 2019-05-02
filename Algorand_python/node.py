@@ -288,6 +288,9 @@ class Node(object):
 			hprev = msg.prevBlockHash
 			value = msg.thisBlockHash
 			if hprev != H(self.blockChain[len(self.blockChain)-1]):
+				# print("hprev is" ,hprev)
+				# print("from blockchain" ,H(self.blockChain[len(self.blockChain)-1]))
+				#printBlockchain()
 				print("prev block hash mismatch")
 				return tuple((0,False,False,False,False))
 			else:
@@ -296,6 +299,9 @@ class Node(object):
 				return tuple((votes,value,sortHash,pk,block))
 				#return 1
 
+	def printBlockchain(self):
+		for bc in self.blockChain:
+			print(bc)
 	def CountVotes(self, Tstep ,ev):
 		counts = {}
 		#msgs = self.incomingBlockVoteMsg
@@ -562,6 +568,7 @@ class Node(object):
 
 			# eventQ.add(newEvent)
 			self.bastarOutput = r
+			self.bastarBlock = block
 			newEvent = Event(ev.evTime + 1,
 							 ev.evTime + 1,
 							 EventType.FINAL_COUNT_VOTE,
@@ -599,6 +606,7 @@ class Node(object):
 
 			# Push the Final count vote event
 			self.bastarOutput = r
+			self.bastarBlock = block
 			newEvent = Event(ev.evTime + 1,
 							 ev.evTime + 1,
 							 EventType.FINAL_COUNT_VOTE,
@@ -618,19 +626,24 @@ class Node(object):
 
 	def finalCountVote(self,ev):
 		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
+		#print("step number shuld be huge", ev.stepNumber)
 		if r == self.bastarOutput:
-			self.blockChain.append(self.bastarBlock)
-			print(">>>>>>>>>>>>>[FINAL]New Block added with hash = ",H(self.bastarBlock), " in round = ",ev.roundNumber , " ev time " ,ev.evTime )
 			if r == self.getEmptyHash():
 				print("Added block was empty")
+
+			self.blockChain.append(self.bastarBlock)
+			print(">>>>>>>>>>>>>[FINAL",str(self.nodeId),"]New Block added with hash = ",H(self.bastarBlock), " in round = ",ev.roundNumber , " ev time " ,ev.evTime )
+			
 			# add final flag later
 		else:
-			print(">>>>>>>>>>>>>[TENTATIVE]New Block added with hash = ", H(self.bastarBlock), " in round = ",ev.roundNumber , " ev time " , ev.evTime)
-			self.blockChain.append(self.bastarBlock)
+			print(">>>>>>>>>>>>>[TENTATIVE",str(self.nodeId)," ]New Block added with hash = ", H(self.bastarBlock), " in round = ",ev.roundNumber , " ev time " , ev.evTime)
 			if r == self.getEmptyHash():
 				print("Added block was empty")
-			elif r == None:
-				print("#########################")
+			self.blockChain.append(self.bastarBlock)
+			# if r == self.getEmptyHash():
+			# 	print("Added block was empty")
+			# elif r == None:
+			# 	print("#########################")
 			# add tentative flag later
 
 		# newEvent = Event(ev.evTime + 1,
@@ -682,7 +695,7 @@ class Node(object):
 			votes, value,sortHash, pk,block = res
 			for j in range(0,votes):
 				h = H(str(sortHash) + str(j))  # TODO check the type of sortHash
-				if h < minHash:
+				if int(h,16) < minHash:
 					minHash = h
 
 		return minHash % 2
