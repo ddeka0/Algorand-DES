@@ -307,34 +307,54 @@ class Node(object):
 		voters = []
 		# TODO parallelize the following while loop
 
-		nprocs = cpu_count()
-		pool = Pool(nprocs)
-		results = list(Pool(processes=nprocs).map(partial(self.ProcessMsg,ctx_Weight),msgs))
-		pool.close()
+		# nprocs = cpu_count()
+		# pool = Pool(nprocs)
+		# results = list(Pool(processes=nprocs).map(partial(self.ProcessMsg,ctx_Weight),msgs))
+		# pool.close()
 		# print(self.nodeId," processed ",len(results)," block vote messages")
 
 		# Clear the incoming VoteMessage list
 		# Could be used in the next step again
 		#self.incomingBlockVoteMsg.clear()
+		
+		while True:
+			try:
+				m=msgs.pop()
+				votes, value, sortHasg, pk, block = self.ProcessMsg(ctx_Weight,m)
+				if pk in voters or votes == 0:
+					continue
+				voters.append(pk)
+				if value in counts:
+					counts[value] += votes
+				else:
+					counts[value] = votes
+				if counts[value] >= math.floor(Tstep * self.tau_committee): # TODO check this condition fully
+					#print("found ", counts[value], " expected ", math.floor(Tstep * self.tau_committee))
+					return (value,block)
+				else:
+					#print("found ",counts[value]," expected ",math.floor(Tstep * self.tau_committee))
+					pass
+			except:
+				return (None , None)
 		if ev.getRoundStepTuple() in self.incomingBlockVoteMsg:
 			self.incomingBlockVoteMsg[ev.getRoundStepTuple()].clear()
 		
-		for res in results:
-			votes, value, sortHasg, pk, block = res
+		# for res in results:
+		# 	votes, value, sortHasg, pk, block = res
 
-			if pk in voters or votes == 0:
-				continue
-			voters.append(pk)
-			if value in counts:
-				counts[value] += votes
-			else:
-				counts[value] = votes
-			if counts[value] >= math.floor(Tstep * self.tau_committee): # TODO check this condition fully
-				#print("found ", counts[value], " expected ", math.floor(Tstep * self.tau_committee))
-				return (value,block)
-			else:
-				#print("found ",counts[value]," expected ",math.floor(Tstep * self.tau_committee))
-				pass
+		# 	if pk in voters or votes == 0:
+		# 		continue
+		# 	voters.append(pk)
+		# 	if value in counts:
+		# 		counts[value] += votes
+		# 	else:
+		# 		counts[value] = votes
+		# 	if counts[value] >= math.floor(Tstep * self.tau_committee): # TODO check this condition fully
+		# 		#print("found ", counts[value], " expected ", math.floor(Tstep * self.tau_committee))
+		# 		return (value,block)
+		# 	else:
+		# 		#print("found ",counts[value]," expected ",math.floor(Tstep * self.tau_committee))
+		# 		pass
 		return (None,None)
 
 
@@ -600,12 +620,12 @@ class Node(object):
 		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
 		if r == self.bastarOutput:
 			self.blockChain.append(self.bastarBlock)
-			print(">>>>>>>>>>>>>[FINAL]New Block added with hash = ",H(self.bastarBlock), " in round = ",ev.roundNumber)
+			print(">>>>>>>>>>>>>[FINAL]New Block added with hash = ",H(self.bastarBlock), " in round = ",ev.roundNumber , " ev time " ,ev.evTime )
 			if r == self.getEmptyHash():
 				print("Added block was empty")
 			# add final flag later
 		else:
-			print(">>>>>>>>>>>>>[TENTATIVE]New Block added with hash = ", H(self.bastarBlock), " in round = ",ev.roundNumber)
+			print(">>>>>>>>>>>>>[TENTATIVE]New Block added with hash = ", H(self.bastarBlock), " in round = ",ev.roundNumber , " ev time " , ev.evTime)
 			self.blockChain.append(self.bastarBlock)
 			if r == self.getEmptyHash():
 				print("Added block was empty")
@@ -613,17 +633,17 @@ class Node(object):
 				print("#########################")
 			# add tentative flag later
 
-		newEvent = Event(ev.evTime + 1,
-							ev.evTime + 1,
-							EventType.BLOCK_PROPOSER_SORTITION_EVENT,
-							noMessage(),
-							TIMEOUT_NOT_APPLICABLE,
-							self,
-							self,
-							ev.roundNumber + 1,
-							0)
+		# newEvent = Event(ev.evTime + 1,
+		# 					ev.evTime + 1,
+		# 					EventType.BLOCK_PROPOSER_SORTITION_EVENT,
+		# 					noMessage(),
+		# 					TIMEOUT_NOT_APPLICABLE,
+		# 					self,
+		# 					self,
+		# 					ev.roundNumber + 1,
+		# 					0)
 
-		eventQ.add(newEvent)		
+		#eventQ.add(newEvent)		
 		
 
 	def BAstartCountVoteThree(self,ev):

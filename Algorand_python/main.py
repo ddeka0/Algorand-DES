@@ -55,26 +55,35 @@ if __name__ == "__main__":
 
 
 	#print(delays)
-
-	for node in allNodes:
-		#print("pushed new event")
-		newEvent = Event(0,
-						0,
-						EventType.BLOCK_PROPOSER_SORTITION_EVENT,
-						noMessage(),
-						TIMEOUT_NOT_APPLICABLE,
-						node,
-						node,
-						1,
-						0)	# Initial step Number
-		eventQ.add(newEvent)
+	custom_time=0
+	for i in range(10):
+		custom_time = 200*i 
+		for node in allNodes:
+			#print("pushed new event")
+			newEvent = Event(custom_time,
+							custom_time,
+							EventType.BLOCK_PROPOSER_SORTITION_EVENT,
+							noMessage(),
+							TIMEOUT_NOT_APPLICABLE,
+							node,
+							node,
+							i+1,
+							0)	# Initial step Number
+			eventQ.add(newEvent)
 
 	#print("Initial eventQ size = ",len(eventQ))
 
 	while(True):
 		if len(eventQ) == 0:
 			break
+		#print("*************************************")
+		# for evn in eventQ:
+		# 	print(evn)
+		
 		ev = eventQ.pop(0)
+		# if ev.evType != EventType.BLOCK_PROPOSE_GOSSIP_EVENT and  ev.evType != EventType.PRIORITY_GOSSIP_EVENT and ev.evType != EventType.BLOCK_VOTE_GOSSIP_EVENT:
+		# 	input("Press to unblock")
+		
 		executeEvent(ev)
 
 	print("Simulation completed !")
