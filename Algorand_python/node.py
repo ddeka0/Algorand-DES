@@ -15,8 +15,9 @@ class Node(object):
 		self.w = w
 		self.priorityGossipFound = False
 		self.priorityList = []
-		self.tau = MAX_NODES * 0.1 # 10 percent
+		#self.tau = MAX_NODES * 0.1 # 10 percent
 		#self.tau = 5  # 10 percent
+		self.tau = 15 #this is for 2.2.4
 		self.tau_committee = tou_step  # 20 percent
 		self.W = MAX_NODES * (MAX_ALGORAND / 2)
 		self.lastGossipMessage = ""
@@ -102,6 +103,8 @@ class Node(object):
 				MyPriority = res[1].priority
 				print("I am (",self.nodeId,") topProposer and ",MyPriority," is my priority")
 				MyPriorityMsg = res[1]
+			else:
+				print(self.nodeId,"For me (",res[0].nodeId,") is topProposer and ",res[1].priority," is my priority")
 
 		if IamTopProposer is not None:
 			# I need to create a block and gossip to the network
