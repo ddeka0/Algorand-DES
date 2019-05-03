@@ -1,4 +1,9 @@
 import random
+from ecdsa import SigningKey ,NIST256p
+#import matplotlib.pyplot as plt
+
+
+
 # returns nCr
 def nCr(n, r):
 	return fact(n) // (fact(r) * fact(n - r))
@@ -27,30 +32,28 @@ def PRG(seed):
 	return hashValue
 
 
-def VerifySort(pk, hashValue, pi, seed, tau, role, w, W,jj):
-	if not pk.verify(hashValue, str((pi)).encode('utf-8')):
-		return 0
-	else:
+def VerifySort(pk, hashValue, pi, seed, tau, role, w, W):
 
-		hashval = hashValue.hex()
-		p = tau / W
-		j = 0
-		value = int(hashval,16) / (2 ** 512)
-		while j <= w:
-			leftlimit = 0
-			rightlimit = 0
-			for k in range(j):
-				leftlimit = leftlimit + B(k, w, p)
+	# if not pk.verify(hashValue, str((pi)).encode('utf-8')):
+	# 	return 0
+	# else:
+	hashval = hashValue.hex()
+	p = tau / W
+	j = 0
+	value = int(hashval,16) / (2 ** 512)
+	while j <= w:
+		leftlimit = 0
+		rightlimit = 0
+		for k in range(j):
+			leftlimit = leftlimit + B(k, w, p)
 
-			for k in range(j + 1):
-				rightlimit = rightlimit + B(k, w, p)
+		for k in range(j + 1):
+			rightlimit = rightlimit + B(k, w, p)
 
-			if leftlimit > value or value >= rightlimit:
-				j = j + 1
-			else:
-				break
-	if j != jj:
-		print("vvvvvvvvvvvvvvvvvvvv")
+		if leftlimit > value or value >= rightlimit:
+			j = j + 1
+		else:
+			break
 	return j
 
 def Sortition(sk, seed, tauProposer, role, w, W):
@@ -79,3 +82,7 @@ def Sortition(sk, seed, tauProposer, role, w, W):
 		else:
 			break
 	return tuple((VRFhash,pi,j))
+
+
+
+
