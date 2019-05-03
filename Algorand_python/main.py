@@ -82,7 +82,7 @@ if __name__ == "__main__":
 	for i in range(MAX_NODES):
 		allNodes.append(Node(i,sk_List[i],pk_List[i],ctx_Weight[pk_List[i]]))
 
-    # #2.3 fail stop adversary
+    #2.3 fail stop adversary
 	# for i in range(MAX_NODES):
 	# 	random_number = random.randint(1, 1000)
 	# 	if random_number < 50 :
