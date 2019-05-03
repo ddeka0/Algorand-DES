@@ -36,6 +36,7 @@ class Node(object):
 
 		
 		self.isAdversary=False
+		self.isByzantine =False
 
 	def __str__(self):
 		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
@@ -100,7 +101,7 @@ class Node(object):
 			if res[0].nodeId == self.nodeId:
 				IamTopProposer = True
 				MyPriority = res[1].priority
-				print("I am (",self.nodeId,") topProposer and ",MyPriority," is my priority")
+				print(self.nodeId,"sortition-top-proposer-round",str(ev.roundNumber))
 				MyPriorityMsg = res[1]
 
 		if IamTopProposer is not None:
@@ -111,7 +112,7 @@ class Node(object):
 
 			newBlockPropMsg = BlockProposeMsg(prevBlockHash,thisBlockContent,MyPriorityMsg)
 
-			print(H(newBlockPropMsg.block))
+			#print(H(newBlockPropMsg.block))
 
 			# Gossip This newBlockPropMsg
 			# create a sendBlockPropGossip on myself and return
@@ -184,6 +185,10 @@ class Node(object):
 			pass
 		else:
 			# Find block from max priority proposer only and vote on it
+			
+			# self.incomingProposedBlocks.sort(key=lambda x: x.priorityMsgPayload.priority, reverse=True)
+			# print(self.incomingProposedBlocks)
+
 			minPrio = 2**300
 			maxPropBlockMsg = None
 			for propBlockMsg in self.incomingProposedBlocks:
@@ -198,6 +203,7 @@ class Node(object):
 			if resp.j > 0: # If I have own the committe
 				# push a gossip event on myself that will trigger further gossip
 				#print(self.nodeId, " Reduction step1 starts and I am a committe member with j = ",resp.j)
+				print(self.nodeId,"sortition-reduction-step-one",str(ev.roundNumber))
 				prevBlock = self.blockChain[len(self.blockChain) - 1]
 				prevBlockHash = H(prevBlock)
 				thisBlockHash = hashlib.sha256(maxPropBlockMsg.block.__str__().encode()).hexdigest()
@@ -380,7 +386,7 @@ class Node(object):
 			block = self.getEmptyBlock()
 			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,tou_step,H(block),block)
 		else:
-			print(self.nodeId, "Got anough vote for ", hBlockOne)
+			print(self.nodeId, "Got anough vote for (hblock-1)", hBlockOne)
 			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,tou_step,hBlockOne,block)
 
 
@@ -394,7 +400,8 @@ class Node(object):
 		resp = srtnResp(retval[0], retval[1], retval[2])  # TODO remove
 		if resp.j > 0:  # If I have own the committe
 			# push a gossip event on myself that will trigger further gossip
-			print(self.nodeId, " Reduction step2 starts and I am a committe member with j = ", resp.j)
+			#print(self.nodeId, " Reduction step2 starts and I am a committe member with j = ", resp.j)
+			print(self.nodeId,"sortition-reduction-step-two",str(ev.roundNumber))
 			prevBlock = self.blockChain[len(self.blockChain) - 1]
 			prevBlockHash = H(prevBlock)
 			thisBlockHash = hBlock  # this could be empty or non empty also
@@ -421,7 +428,7 @@ class Node(object):
 
 			eventQ.add(newEvent)
 		else:
-			print(self.nodeId," lose the second round of committe vote")
+			#print(self.nodeId," lose the second round of committe vote")
 			pass
 		# Push the reduction step 2 cound vote event after +3 sec
 		newEvent2 = Event(ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
@@ -439,11 +446,11 @@ class Node(object):
 		#print("Reduction step2 Count Vote started at time ", ev.evTime)
 		hBlockTwo,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)
 		if hBlockTwo == TIMEOUT:
-			print(self.nodeId, "Got hBlockTwo TIMEOUT")
+			print(self.nodeId, "hblock-2 TIMEOUT")
 			self.bastarBlockHash = self.getEmptyHash()
 			self.bastarBlock = self.getEmptyBlock()
 		else:
-			print(self.nodeId, "Got anough vote for ", hBlockTwo)
+			print(self.nodeId, "Got anough vote for (hblock-2)", hBlockTwo)
 			self.bastarBlockHash = hBlockTwo
 			self.bastarBlock = block
 
@@ -484,6 +491,7 @@ class Node(object):
 		if resp.j > 0:  # If I have own the committe
 			# push a gossip event on myself that will trigger further gossip
 			#print(self.nodeId, "BA* step ",stepNumber,"and round =",roundNumber," : selected as committe member with j = ", resp.j)
+			print(self.nodeId,"sortition-bastar-step",str(ev.stepNumber),"round",str(ev.roundNumber))
 			prevBlock = self.blockChain[len(self.blockChain) - 1]
 			prevBlockHash = H(prevBlock)
 			thisBlockHash = block_hash  # this could be empty or non empty also
@@ -510,7 +518,7 @@ class Node(object):
 
 			eventQ.add(newEvent)
 		else:
-			print(self.nodeId," lose the ",roundNumber," round and ",stepNumber," step of committe vote")
+			#print(self.nodeId," lose the ",roundNumber," round and ",stepNumber," step of committe vote")
 			pass
 		# TODO all of the following timeout valus are not correct
 		# TODO these are somehow working only
@@ -781,7 +789,7 @@ class Node(object):
 		retval = Sortition(self.secretkey,self.seed,self.tau,"hello",self.w,self.W)
 		resp = srtnResp(retval[0],retval[1],retval[2])
 		if resp.j > 0:
-			print(self.nodeId, " I am a possible proposer")
+			print(self.nodeId,"sortition-priority-round",str(ev.roundNumber))
 			minPrio = self.computePriority(resp) # min --> max in algorand
 			newPriorityMsg = priorityMessage(GossipType.PRIORITY_GOSSIP,
 										ev.roundNumber,
