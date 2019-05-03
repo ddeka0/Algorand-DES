@@ -19,8 +19,10 @@ w_list = []
 ctx_Weight = {}
 blockDelays=[]
 
-MAX_NODES = 100
+MAX_NODES = 256
 TIMEOUT = None
+
+ROUNDS = 32 ################
 
 REDUCTION_TWO = 2
 tou_step = MAX_NODES * 0.2
@@ -51,6 +53,10 @@ GENESIS_BLOCK_CONTENT = "We are building the best Algorand Discrete Event Simula
 MIN_DELAY = 0
 DIVIDE_BY = 1000
 
+
+TENTATIVE_CONSENSUS		 	= "tentative"
+FINAL_CONSENSUS		 		= "final"
+NO_CONSENSUS		 		= "no_consensus"
 
 GOSSIP_FAN_OUT 			= 3
 T_STEP_REDUCTION_STEP_ONE = 2/3
@@ -167,9 +173,10 @@ def FindMaxPriorityAndNode(priorityList):
 
 
 class Block(object):
-	def __init__(self, randomString, prevBlockHash = None):
+	def __init__(self, randomString ,prevBlockHash = None):
 		self.transactions = randomString
 		self.prevBlockHash = prevBlockHash
+		self.state = NO_CONSENSUS
 
 	def __str__(self):
 		#return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
