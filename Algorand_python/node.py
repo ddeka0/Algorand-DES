@@ -27,12 +27,15 @@ class Node(object):
 		genesisBlock = Block(GENESIS_BLOCK_CONTENT)
 		genesisBlock.state = FINAL_CONSENSUS
 		self.blockChain.append(genesisBlock)
-
+		
 		self.incomingProposedBlocks = []	# this queue will be used for incoming block prop messages
 		self.incomingBlockVoteMsg = {}		# this queue will be used for incoming vote block message
 		self.bastarBlockHash = None
 		self.bastarOutput = None
 		self.bastarBlock = None
+
+		
+		self.isAdversary=False
 
 	def __str__(self):
 		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))

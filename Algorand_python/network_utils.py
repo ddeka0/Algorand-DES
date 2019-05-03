@@ -19,10 +19,10 @@ w_list = []
 ctx_Weight = {}
 blockDelays=[]
 
-MAX_NODES = 256
+MAX_NODES = 50
 TIMEOUT = None
 
-ROUNDS = 32 ################
+ROUNDS = 5 ################
 
 REDUCTION_TWO = 2
 tou_step = MAX_NODES * 0.2
@@ -180,7 +180,7 @@ class Block(object):
 
 	def __str__(self):
 		#return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
-		return "\n" + "transactions = " + str(self.transactions) + "\n" \
+		return "\n" + "transactions = " + str(self.transactions) + "\t" \
 				+ "prevBlockHash = " + str(self.prevBlockHash)
 
 class BlockProposeMsg(object):

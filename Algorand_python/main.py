@@ -17,25 +17,57 @@ def executeEvent(ev):
 	elif eventType == EventType.PRIORITY_GOSSIP_EVENT:
 		targetNode.sendPriorityGossip(ev)
 	elif eventType == EventType.SELECT_TOP_PROPOSER_EVENT:
-		targetNode.selectTopProposer(ev)
+		if not targetNode.isAdversary:
+			targetNode.selectTopProposer(ev)
+		else:
+			print("~~~~~~~~~~~~~~~~ I am adversary. I do bad stuff. " , eventType )
+			pass
 	elif eventType == EventType.BLOCK_PROPOSE_GOSSIP_EVENT:
 		targetNode.sendBlockPropGossip(ev)
 	elif eventType == EventType.REDUCTION_COMMITTEE_VOTE_STEP_ONE:
-		targetNode.reductionCommitteVoteStepOne(ev)
+		if not targetNode.isAdversary:
+			targetNode.reductionCommitteVoteStepOne(ev)
+		else:
+			print("~~~~~~~~~~~~~~~~ I am adversary. I do bad stuff. " , eventType )
+			pass
 	elif eventType == EventType.BLOCK_VOTE_GOSSIP_EVENT:
 		targetNode.sendBlockVoteGossip(ev)
 	elif eventType == EventType.REDUCTION_COUNT_VOTE_STEP_ONE:
-		targetNode.reductionCountVoteStepOne(ev)
+		if not targetNode.isAdversary:
+			targetNode.reductionCountVoteStepOne(ev)
+		else:
+			print("~~~~~~~~~~~~~~~~ I am adversary. I do bad stuff. " , eventType )
+			pass
 	elif eventType == EventType.REDUCTION_COUNT_VOTE_STEP_TWO:
-		targetNode.reductionCountVoteStepTwo(ev)
+		if not targetNode.isAdversary:
+			targetNode.reductionCountVoteStepTwo(ev)
+		else:
+			print("~~~~~~~~~~~~~~~~ I am adversary. I do bad stuff. " , eventType )
+			pass
 	elif eventType == EventType.BASTAR_COUNT_VOTE_ONE:
-		targetNode.BAstartCountVoteOne(ev)
+		if not targetNode.isAdversary:
+			targetNode.BAstartCountVoteOne(ev)
+		else:
+			print("~~~~~~~~~~~~~~~~ I am adversary. I do bad stuff. " , eventType )
+			pass
 	elif eventType == EventType.BASTAR_COUNT_VOTE_TWO:
-		targetNode.BAstartCountVoteTwo(ev)
+		if not targetNode.isAdversary:
+			targetNode.BAstartCountVoteTwo(ev)
+		else:
+			print("~~~~~~~~~~~~~~~~ I am adversary. I do bad stuff. " , eventType )
+			pass
 	elif eventType == EventType.BASTAR_COUNT_VOTE_THREE:
-		targetNode.BAstartCountVoteThree(ev)
+		if not targetNode.isAdversary:
+			targetNode.BAstartCountVoteThree(ev)
+		else:
+			print("~~~~~~~~~~~~~~~~ I am adversary. I do bad stuff. " , eventType )
+			pass
 	elif eventType == EventType.FINAL_COUNT_VOTE:
-		targetNode.finalCountVote(ev)
+		if not targetNode.isAdversary:
+			targetNode.finalCountVote(ev)
+		else:
+			print("~~~~~~~~~~~~~~~~ I am adversary. I do bad stuff. " , eventType )
+			pass
 	else:
 		print("Event Type is not recognised")
 
@@ -50,6 +82,13 @@ if __name__ == "__main__":
 	for i in range(MAX_NODES):
 		allNodes.append(Node(i,sk_List[i],pk_List[i],ctx_Weight[pk_List[i]]))
 
+    #2.3 fail stop adversary
+	for i in range(MAX_NODES):
+		random_number = random.randint(1, 1000)
+		if random_number < 50 :
+			allNodes[i].isAdversary=True
+			print("Hi I am adversary",allNodes[i].nodeId)
+			
 	init_Delays()
 
 
@@ -85,5 +124,6 @@ if __name__ == "__main__":
 		# 	input("Press to unblock")
 		
 		executeEvent(ev)
-
+	for xmas in allNodes[0].blockChain:
+		print(str(xmas))
 	print("Simulation completed !")
