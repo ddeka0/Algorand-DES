@@ -10,7 +10,7 @@ listsk = []
 listpk = []
 MAX_NODES = 256
 
-def tmep():
+def generate_pk_sk():
 	for i in range(MAX_NODES):
 		listsk.append(ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1))
 		print("sk = ", i)
@@ -25,18 +25,18 @@ def tmep():
 
 
 
-	with open('keysFile-256', 'wb') as f:
+	with open('keysFile-'+str(MAX_NODES), 'wb') as f:
 		pickle.dump(total_list, f)
 
 
-	with open('keysFile-256', 'rb') as f:
+	with open('keysFile-'+str(MAX_NODES), 'rb') as f:
 		read_list = pickle.load(f)
 
 
-def init_Delays():
+def generate_delayMatrices():
 	delays=[]
 	blockDelays=[]
-	MAX_NODES=256
+	#MAX_NODES=256
 	for i in range(MAX_NODES):
 		lz = [0] * MAX_NODES
 		delays.append(lz)
@@ -72,7 +72,24 @@ def init_Delays():
 	motal_list.append(blockDelays)
 	
 
-	with open('delays-256', 'wb') as f:
+	with open('delays-'+str(MAX_NODES), 'wb') as f:
 		pickle.dump(motal_list, f)
 
-init_Delays()
+def generate_peer_list():
+	peer_list={}
+	for i in range(MAX_NODES):
+		peers_len = np.random.randint(2, 4)
+		peer_list[i] = np.random.randint(0, MAX_NODES-1,(peers_len))
+		while i in peer_list[i]:
+			peer_list[i] = np.random.randint(0, MAX_NODES-1,(peers_len))
+			print("some conflict")
+	#print(peer_list)
+	with open('peer-list-'+str(MAX_NODES), 'wb') as f:
+		pickle.dump(peer_list, f)
+
+
+generate_peer_list()
+with open('peer-list-'+  str(MAX_NODES), 'rb') as f:
+		apl = pickle.load(f)
+		print(apl)
+

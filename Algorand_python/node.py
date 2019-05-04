@@ -70,19 +70,19 @@ class Node(object):
 			else:
 				print("This code should never be executed")
 
-			randomNodeCnt = 0
-			while randomNodeCnt < GOSSIP_FAN_OUT:
-				randomNode = random.choice(allNodes)
-				if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
-					self.peerList.append(randomNode)
-					randomNodeCnt = randomNodeCnt + 1
+			# randomNodeCnt = 0
+			# while randomNodeCnt < GOSSIP_FAN_OUT:
+			# 	randomNode = random.choice(allNodes)
+			# 	if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
+			# 		self.peerList.append(randomNode)
+			# 		randomNodeCnt = randomNodeCnt + 1
 
 			for peer in self.peerList:
 				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut: # delay non block
 					self.sendMsg(ev,peer,delays[self.nodeId][peer.nodeId])
 				else:
 					pass
-			self.peerList.clear()
+			#self.peerList.clear()
 			self.lastGossipMessage = message.__str__() # not very perfect but still stops some messages
 			self.sentGossipMessages.append(message)
 		else:
@@ -159,11 +159,11 @@ class Node(object):
 
 			randomNodeCnt = 0
 
-			while randomNodeCnt < GOSSIP_FAN_OUT:
-				randomNode = random.choice(allNodes)
-				if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
-					self.peerList.append(randomNode)
-					randomNodeCnt = randomNodeCnt + 1
+			# while randomNodeCnt < GOSSIP_FAN_OUT:
+			# 	randomNode = random.choice(allNodes)
+			# 	if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
+			# 		self.peerList.append(randomNode)
+			# 		randomNodeCnt = randomNodeCnt + 1
 
 			for peer in self.peerList:
 				if ev.evTime + blockDelays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
@@ -172,7 +172,7 @@ class Node(object):
 				else:
 					pass
 
-			self.peerList.clear()
+			#self.peerList.clear()
 			self.sentGossipMessages.append(message)
 		else:
 			#print("Block Prop Message Discarded : already sent via this Node [", self.nodeId, "] at time = ",ev.evTime)
@@ -259,11 +259,11 @@ class Node(object):
 
 			randomNodeCnt = 0
 
-			while randomNodeCnt < GOSSIP_FAN_OUT:
-				randomNode = random.choice(allNodes)
-				if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
-					self.peerList.append(randomNode)
-					randomNodeCnt = randomNodeCnt + 1
+			# while randomNodeCnt < GOSSIP_FAN_OUT:
+			# 	randomNode = random.choice(allNodes)
+			# 	if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
+			# 		self.peerList.append(randomNode)
+			# 		randomNodeCnt = randomNodeCnt + 1
 
 			for peer in self.peerList:
 				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
@@ -273,7 +273,7 @@ class Node(object):
 				else:
 					print("More Delay")
 
-			self.peerList.clear()
+			#self.peerList.clear()
 			self.sentGossipMessages.append(message)
 		else:
 			#print("Block Prop Message Discarded : already sent via this Node [", self.nodeId, "] at time = ",ev.evTime)
@@ -761,7 +761,7 @@ class Node(object):
 
 	def proposePriority(self,ev): # round K
 
-		self.peerList.clear()
+		#self.peerList.clear()
 		self.sentGossipMessages.clear()
 		self.incomingBlockVoteMsg.clear()
 

@@ -10,6 +10,7 @@ import hashlib
 import secrets
 import pickle
 
+allPeerList={}
 delays = []
 eventQ = SortedList()
 allNodes = []
@@ -158,6 +159,13 @@ def init_Delays():
 	# 			normal_delay = np.random.normal(30,64,1)
 	# 			normal_delay = list(normal_delay)[0]
 	# 			blockDelays[i.nodeId][j.nodeId] = max(MIN_DELAY,normal_delay)/DIVIDE_BY
+
+def init_peer_list():
+	global allPeerList
+	with open('peer-list-'+  str(MAX_NODES), 'rb') as f:
+		allPeerList = pickle.load(f)
+		print(allPeerList)
+
 
 
 def init_AsymmtericKeys(listsk, listpk):

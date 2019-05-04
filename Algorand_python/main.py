@@ -78,10 +78,23 @@ if __name__ == "__main__":
 	print("max nodes in Algorand Network ", len(sk_List))
 
 	init_w(ctx_Weight,pk_List)
-
+	
+	
 	for i in range(MAX_NODES):
 		allNodes.append(Node(i,sk_List[i],pk_List[i],ctx_Weight[pk_List[i]]))
+	
+ 	#set static peer list
+	with open('peer-list-'+  str(MAX_NODES), 'rb') as f:
+		allPeerList = pickle.load(f)
+	
+	for i in range(MAX_NODES):
+		if i in allPeerList:
+			for x in allPeerList[i]:
+				allNodes[i].peerList.append(allNodes[x])
+			print(i, "My peers are",allNodes[i].peerList)
 
+
+#33 My peers are [127  12 240]
     #2.3 fail stop adversary
 	# for i in range(MAX_NODES):
 	# 	random_number = random.randint(1, 1000)
@@ -90,12 +103,12 @@ if __name__ == "__main__":
 	# 		print("Hi I am adversary",allNodes[i].nodeId)
 
 
-	#2.3 fail stop adversary
-	#for i in range(MAX_NODES):
-	#	random_number = random.randint(1, 1000)
-	#	if random_number < 50 :
-	#		allNodes[i].isByzantine=True
-	#		print("Hi I am byzantine",allNodes[i].nodeId)
+	#2.4 byzantine adversary
+	# for i in range(MAX_NODES):
+	# 	random_number = random.randint(1, 1000)
+	# 	if random_number < 50 :
+	# 		allNodes[i].isByzantine=True
+	# 		print("Hi I am byzantine",allNodes[i].nodeId)
 	
 
 	init_Delays()
