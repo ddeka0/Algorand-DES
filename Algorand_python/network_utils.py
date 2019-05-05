@@ -9,29 +9,19 @@ import ecdsa
 import hashlib
 import secrets
 import pickle
+import sys
+import os.path
+from keygen import *
+import config
 
-delays = []
 eventQ = SortedList()
 allNodes = []
+delays = []
+blockDelays=[]
 sk_List = []
 pk_List = []
 w_list = []
 ctx_Weight = {}
-blockDelays=[]
-
-MAX_NODES = 256
-TIMEOUT = None
-
-ROUNDS = 5 ################
-
-REDUCTION_TWO = 2
-tou_step = MAX_NODES * 0.2
-#tou_step = 5
-tou_final = MAX_NODES * 0.2
-
-FINAL_STEP  = 1000000
-
-MAX_STEPS = 10 # given in the problem statement
 
 INVOKE_BA_START_COUNT_VOTE_ONE = 1
 
@@ -40,28 +30,6 @@ INVOKE_BA_START_COUNT_VOTE_TWO = 2
 INVOKE_BA_START_COUNT_VOTE_THREE = 3
 
 DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE = 0
-
-PRIORITY_GOSSIP_TIMEOUT = 3
-BLOCK_PROPOSE_GOSSIP_TIMEOUT	= 3
-BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT = 20 # TODO check once
-BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT = 20 # TODO check once
-BA_STAR_GOSSIP_TIMEOUT = 20 # TODO check
-TIMEOUT_NOT_APPLICABLE = -1
-MAX_ALGORAND = 50
-GENESIS_BLOCK_CONTENT = "We are building the best Algorand Discrete Event Simulator"
-
-# max(MIN_DELAY,normal_delay)/DIVIDE_BY
-MIN_DELAY = 0
-DIVIDE_BY = 1000
-
-
-TENTATIVE_CONSENSUS		 	= "tentative"
-FINAL_CONSENSUS		 		= "final"
-NO_CONSENSUS		 		= "no_consensus"
-
-GOSSIP_FAN_OUT 			= 3
-T_STEP_REDUCTION_STEP_ONE = 2/3
-T_STEP_REDUCTION_STEP_TWO = 2/3
 
 class EventType(Enum):
 	BLOCK_PROPOSER_SORTITION_EVENT = 0
@@ -102,7 +70,6 @@ class priorityMessage(object):
 		self.sourceNode = sourceNode
 
 	def __str__(self):
-		#return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
 		return "\n" + "roundNumber = " + str(self.roundNumber) + "\n" \
 				+ "hashOutput = " + str(self.hashOutput) + "\n" \
 				+ "subUserIndex = " + str(self.subUserIndex) + "\n" \
@@ -112,64 +79,42 @@ class noMessage(object):
 	def __init__(self):
 		pass
 	def __str__(self):
-		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
+		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item 
+			in self.__dict__))
 
 
-def init_Delays():
-	global delays
-	global allNodes
-	global blockDelays
-	all_delays=[]
-	with open('delays-'+  str(MAX_NODES), 'rb') as f:
+def init_Delays(delays,blockDelays):
+	all_delays = []
+	if not os.path.exists("delays-" + str(config.MAX_NODES)):
+		print("non-block delays are not stored in file yet.")
+		print("generating non-block delay martix..")
+		generate_delays(config.MAX_NODES,config.NON_BLOCK_MSG_DELAY_MEAN,\
+						config.NON_BLOCK_MSG_DELAY_SIGMA,config.BLOCK_MSG_DELAY_MEAN,\
+						config.BLOCK_MSG_DELAY_SIGMA,config.MIN_DELAY)	
+
+	with open('delays-'+  str(config.MAX_NODES), 'rb') as f:
 		all_delays = pickle.load(f)
-	
-
-	# for i in range(MAX_NODES):
-	# 	lz = [0] * MAX_NODES
-	# 	delays.append(lz)
 
 	delays.extend(all_delays[0])
-	# print(delays)
 	blockDelays.extend(all_delays[1])
-	# for i in range(MAX_NODES):
-	# 	lz = [0] * MAX_NODES
-	# 	blockDelays.append(lz)
-
-	
-	# for i in allNodes:
-	# 	for j in allNodes:
-	# 		if i == j:
-	# 			delays[i.nodeId][j.nodeId] = 0
-	# 		else:
-	# 			#normal_delay = np.random.normal(200,400,1)
-	# 			normal_delay = np.random.normal(40,64,1)
-	# 			normal_delay = list(normal_delay)[0]
-	# 			delays[i.nodeId][j.nodeId] = max(MIN_DELAY,normal_delay)/DIVIDE_BY  # TODO: change value here
-
-	# for i in range(MAX_NODES):
-	# 	lz = [0] * MAX_NODES
-	# 	blockDelays.append(lz)
-
-	# for i in allNodes:
-	# 	for j in allNodes:
-	# 		if i == j:
-	# 			blockDelays[i.nodeId][j.nodeId] = 0
-	# 		else:
-	# 			normal_delay = np.random.normal(30,64,1)
-	# 			normal_delay = list(normal_delay)[0]
-	# 			blockDelays[i.nodeId][j.nodeId] = max(MIN_DELAY,normal_delay)/DIVIDE_BY
 
 
 def init_AsymmtericKeys(listsk, listpk):
-	pickleFile = open("keysFile-" + str(MAX_NODES), 'rb')
+	if not os.path.exists("keysFile-" + str(config.MAX_NODES)):
+		print("keys are not stored in file yet.")
+		print("generating keys..")
+		generate_keys(config.MAX_NODES)
+	
+	pickleFile = open("keysFile-" + str(config.MAX_NODES), 'rb')
 	keys = pickle.load(pickleFile)
 	listsk.extend(keys[0])
 	listpk.extend(keys[1])
 	pickleFile.close()
 
+
 def init_w(ctx_Weight,pk_list):
 	for i in pk_list:
-		r = random.randint(1, MAX_ALGORAND)
+		r = random.randint(1, config.MAX_ALGORAND)
 		ctx_Weight[i] = r
 
 
@@ -190,26 +135,25 @@ class Block(object):
 	def __init__(self, randomString ,prevBlockHash = None):
 		self.transactions = randomString
 		self.prevBlockHash = prevBlockHash
-		self.state = NO_CONSENSUS
+		self.state = config.NO_CONSENSUS
 
 	def __str__(self):
-		#return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
 		return "\n" + "transactions = " + str(self.transactions) + "\t" \
 				+ "prevBlockHash = " + str(self.prevBlockHash)
 
 class BlockProposeMsg(object):
 	def __init__(self,prevBlockHash, thisBlockContent, priorityMsgPayload):
 		self.block = Block(thisBlockContent,prevBlockHash)
-		# start of Node's priority payload
 		self.priorityMsgPayload = priorityMsgPayload
-		self.sourceNode = self # TODO check
+		self.sourceNode = self
 
 	def __str__(self):
 		return "\n" + "block = " + str(self.block) + "\n" \
 				+ self.priorityMsgPayload.__str__()
 
 class VoteMsg(object):
-	def __init__(self, roundNumber, step, hashValue, pi, prevBlockHash,thisBlockHash):
+	def __init__(self, roundNumber, step, hashValue, pi, prevBlockHash,\
+				thisBlockHash):
 		self.roudNumber = roundNumber
 		self.step = step
 		self.hashValue = hashValue
@@ -225,15 +169,52 @@ class VoteMsg(object):
 			+ "thisBlockHash = " + str(self.thisBlockHash)
 
 class BlockVoteMsg(object):
-	def __init__(self, userPk, userSk, roundNumber, step, hashValue, pi, prevBlockHash, thisBlockHash,block):
+	def __init__(self, userPk, userSk, roundNumber, step, hashValue, pi,\
+		prevBlockHash, thisBlockHash,block):
 		self.userPk = userPk
-		msg = VoteMsg(roundNumber, step, hashValue, pi, prevBlockHash, thisBlockHash)
+		msg = VoteMsg(roundNumber, step, hashValue, pi, prevBlockHash,\
+			thisBlockHash)
 		digest = userSk.sign(str(msg).encode())
 		# sgnVoteMsg is a tuple consisting of digest and the actual VoteMsg
 		# actual VoteMsg : will be used for verification of the digest
 		self.sgnVoteMsg = (digest,msg)
 		self.block = block
+
+
 def H(block):
 	return (hashlib.sha256(str(block).encode())).hexdigest()
 
 
+def initControlParams(args):
+
+	print("Welcome to Algorand Discrete Event Simulator")
+	config.MAX_NODES = args.max_nodes
+	print("MAX_NODES = ",config.MAX_NODES)
+
+	config.GOSSIP_FAN_OUT = args.fan_out
+	print("GOSSIP_FAN_OUT = ",config.GOSSIP_FAN_OUT)
+
+	config.NON_BLOCK_MSG_DELAY_MEAN = args.non_block_delay_mean
+	print("NON_BLOCK_MSG_DELAY_MEAN = ",config.NON_BLOCK_MSG_DELAY_MEAN)
+
+	config.NON_BLOCK_MSG_DELAY_SIGMA = args.non_block_delay_sigma
+	print("NON_BLOCK_MSG_DELAY_SIGMA = ",config.NON_BLOCK_MSG_DELAY_SIGMA)
+
+	config.BLOCK_MSG_DELAY_MEAN = args.block_delay_mean
+	print("BLOCK_MSG_DELAY_MEAN = ",config.BLOCK_MSG_DELAY_MEAN)
+
+	config.BLOCK_MSG_DELAY_SIGMA = args.block_delay_sigma
+	print("BLOCK_MSG_DELAY_SIGMA = ",config.BLOCK_MSG_DELAY_SIGMA)
+
+	config.tou_step = args.tou_step
+	print("tou_step = ",config.tou_step)
+
+	config.tou_prop = args.tou_prop
+	print("tou_prop = ",config.tou_prop)
+
+	config.tou_final = args.tou_final
+	print("tou_final = ",config.tou_final)
+
+	config.MAX_ALGORAND = args.max_algorand
+	print("MAX_ALGORAND = ",config.MAX_ALGORAND)
+	

@@ -13,6 +13,12 @@ Makefile
 Algorand_python/venv/
 Algorand_python/__pycache__/
 Algorand_python/test-helper.py
+.vscode/
+.idea/
+venv/
+test*/
 
+# Algorand_python/keysFile-*
+# Algorand_python/delays-*
 
 !.gitignore
