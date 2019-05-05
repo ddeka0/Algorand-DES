@@ -1,7 +1,6 @@
 # !/bin/python3
 from node import *
 from network_utils import *
-from signal_handler import *
 import signal
 import time
 

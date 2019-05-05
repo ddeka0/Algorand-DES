@@ -1,5 +1,4 @@
 # !/bin/python3
-# TODO make incomingBlockVoteMsg as dictionary and index with it (round,step)
 from event import Event
 from network_utils import*
 from multiprocessing import  Pool,cpu_count
@@ -21,17 +20,19 @@ class Node(object):
 		self.tau = 15 #this is for 2.2.4
 		self.tau_committee = tou_step  # 20 percent
 		self.W = MAX_NODES * (MAX_ALGORAND / 2)
-		self.lastGossipMessage = ""
 		self.sentGossipMessages = []
 		self.blockChain = []
-		self.seed = "HASHOFPREVIOUSBLOCK" # TODO: compute hash for different rounds
+		self.seed = "HASHOFPREVIOUSBLOCK" 
+		# TODO: compute hash for different rounds
 		# Set Genesis Block
 		genesisBlock = Block(GENESIS_BLOCK_CONTENT)
 		genesisBlock.state = FINAL_CONSENSUS
 		self.blockChain.append(genesisBlock)
 		
-		self.incomingProposedBlocks = []	# this queue will be used for incoming block prop messages
-		self.incomingBlockVoteMsg = {}		# this queue will be used for incoming vote block message
+		self.incomingProposedBlocks = []	
+		# this queue will be used for incoming block prop messages
+		self.incomingBlockVoteMsg = {}		
+		# this queue will be used for incoming vote block message
 		self.bastarBlockHash = None
 		self.bastarOutput = None
 		self.bastarBlock = None
@@ -41,7 +42,8 @@ class Node(object):
 		self.isByzantine =False
 
 	def __str__(self):
-		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
+		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) \
+			for item in self.__dict__))
 
 	def sendMsg(self,event,dstNode,deltaTime):
 		newEvent = Event(event.refTime,
@@ -74,17 +76,19 @@ class Node(object):
 			randomNodeCnt = 0
 			while randomNodeCnt < GOSSIP_FAN_OUT:
 				randomNode = random.choice(allNodes)
-				if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
+				if randomNode != self and (randomNode not in self.peerList):
+					#DONT select myself
 					self.peerList.append(randomNode)
 					randomNodeCnt = randomNodeCnt + 1
 
 			for peer in self.peerList:
-				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut: # delay non block
+				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime \
+					<= ev.timeOut: # delay non block
 					self.sendMsg(ev,peer,delays[self.nodeId][peer.nodeId])
 				else:
 					pass
 			self.peerList.clear()
-			self.lastGossipMessage = message.__str__() # not very perfect but still stops some messages
+			# not very perfect but still stops some messages
 			self.sentGossipMessages.append(message)
 		else:
 			pass
@@ -103,24 +107,19 @@ class Node(object):
 			if res[0].nodeId == self.nodeId:
 				IamTopProposer = True
 				MyPriority = res[1].priority
-				print(self.nodeId,"sortition-top-proposer-round",str(ev.roundNumber))
+				print(self.nodeId,"sortition-top-proposer-round",\
+					str(ev.roundNumber))
 				MyPriorityMsg = res[1]
 			else:
-				#print(self.nodeId,"For me (",res[0].nodeId,") is topProposer and ",res[1].priority," is my priority")
 				pass
-		
+	
 		if IamTopProposer is not None:
-			# I need to create a block and gossip to the network
 			prevBlock = self.blockChain[len(self.blockChain) - 1]
-			prevBlockHash = hashlib.sha256(prevBlock.__str__().encode()).hexdigest()
+			prevBlockHash = hashlib.sha256(prevBlock.__str__().encode())\
+							.hexdigest()
 			thisBlockContent = secrets.randbits(256)
-
-			newBlockPropMsg = BlockProposeMsg(prevBlockHash,thisBlockContent,MyPriorityMsg)
-
-			#print(H(newBlockPropMsg.block))
-
-			# Gossip This newBlockPropMsg
-			# create a sendBlockPropGossip on myself and return
+			newBlockPropMsg = BlockProposeMsg(prevBlockHash,thisBlockContent,\
+				MyPriorityMsg)
 			newEvent = Event(ev.evTime,
 							 ev.evTime,
 							 EventType.BLOCK_PROPOSE_GOSSIP_EVENT,
@@ -145,31 +144,26 @@ class Node(object):
 						self,
 						self,
 						ev.roundNumber,
-						ev.stepNumber + 1) # check step 7 in the problem statement for +1
+						ev.stepNumber + 1)
 
 		eventQ.add(newEvent)
-		#print("\n")
 
 
 	def sendBlockPropGossip(self,ev):
-		# self has received a proposed block just now
-		# update my incomingProposedBlock List and relay further if possible
-		# this incomingProposedBlock will be used in the reductionCommitteVoteStepOne() function
 		if ev.msgToDeliver not in self.sentGossipMessages:
 			message = ev.msgToDeliver
 			self.incomingProposedBlocks.append(message)
-
 			randomNodeCnt = 0
-
 			while randomNodeCnt < GOSSIP_FAN_OUT:
 				randomNode = random.choice(allNodes)
-				if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
+				if randomNode != self and (randomNode not in self.peerList):	
+					#DONT select myself
 					self.peerList.append(randomNode)
 					randomNodeCnt = randomNodeCnt + 1
 
 			for peer in self.peerList:
-				if ev.evTime + blockDelays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
-					#print("Block Gossiped to ",peer.nodeId," by ",self.nodeId," at time  = ",ev.evTime)
+				if ev.evTime + blockDelays[self.nodeId][peer.nodeId] - \
+					ev.refTime <= ev.timeOut:
 					self.sendMsg(ev,peer,blockDelays[self.nodeId][peer.nodeId])
 				else:
 					pass
@@ -177,41 +171,31 @@ class Node(object):
 			self.peerList.clear()
 			self.sentGossipMessages.append(message)
 		else:
-			#print("Block Prop Message Discarded : already sent via this Node [", self.nodeId, "] at time = ",ev.evTime)
 			pass
 
-	def reductionCommitteVoteStepOne(self, ev):  # this is happening in 33 sec # step = 1
-		# clear the record of outgoing proposed block gossip messages
-		# we are going to push new block vote gossip message in this list
+	def reductionCommitteVoteStepOne(self, ev):
 		self.sentGossipMessages.clear()
 
 		if len(self.incomingProposedBlocks) == 0:
-			#print(self.nodeId ,"Reduction step1 starts and I should vote on an empty block") # TODO implement
 			pass
 		else:
-			# Find block from max priority proposer only and vote on it
-			
-			# self.incomingProposedBlocks.sort(key=lambda x: x.priorityMsgPayload.priority, reverse=True)
-			# print(self.incomingProposedBlocks)
-
 			minPrio = 2**300
 			maxPropBlockMsg = None
 			for propBlockMsg in self.incomingProposedBlocks:
 				if propBlockMsg.priorityMsgPayload.priority < minPrio:
 					minPrio = propBlockMsg.priorityMsgPayload.priority
 					maxPropBlockMsg = propBlockMsg
-			# We have got the minBlock (block from max priority)
-			self.genNextSeed(ev.roundNumber, ev.stepNumber)  # self.seed gets updated
-			retval = Sortition(self.secretkey, self.seed, self.tau_committee, "hello", self.w, self.W)
-			# resp = committe sorition result
+			self.genNextSeed(ev.roundNumber, ev.stepNumber)
+			retval = Sortition(self.secretkey, self.seed, self.tau_committee,\
+				 "hello", self.w, self.W)
 			resp = srtnResp(retval[0],retval[1],retval[2]) # TODO remove
 			if resp.j > 0: # If I have own the committe
-				# push a gossip event on myself that will trigger further gossip
-				#print(self.nodeId, " Reduction step1 starts and I am a committe member with j = ",resp.j)
-				print(self.nodeId,"sortition-reduction-step-one",str(ev.roundNumber))
+				print(self.nodeId,"sortition-reduction-step-one",\
+					str(ev.roundNumber))
 				prevBlock = self.blockChain[len(self.blockChain) - 1]
 				prevBlockHash = H(prevBlock)
-				thisBlockHash = hashlib.sha256(maxPropBlockMsg.block.__str__().encode()).hexdigest()
+				thisBlockHash = hashlib.sha256(maxPropBlockMsg.block.__str__()\
+								.encode()).hexdigest()
 
 				blockVoteMsg = BlockVoteMsg(self.publickey,
 											self.secretkey,
@@ -235,7 +219,6 @@ class Node(object):
 
 				eventQ.add(newEvent)
 
-		# Push the reduction step 1 cound vote event after +3 sec
 		newEvent2 = Event(ev.evTime + BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT + 1,
 						ev.evTime + BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT + 1,
 						EventType.REDUCTION_COUNT_VOTE_STEP_ONE,
@@ -249,28 +232,23 @@ class Node(object):
 		eventQ.add(newEvent2)
 
 	def sendBlockVoteGossip(self,ev):
-		# self has received a proposed block just now
-		# update my incomingProposedBlock List and relay further if possible
-		# this incomingProposedBlock will be used in the reductionCommitteVoteStepOne() function
 		if ev.msgToDeliver not in self.sentGossipMessages:
 			message = ev.msgToDeliver
-
 			if ev.getRoundStepTuple() not in self.incomingBlockVoteMsg:
 				self.incomingBlockVoteMsg[ev.getRoundStepTuple()]=[]
 			self.incomingBlockVoteMsg[ev.getRoundStepTuple()].append(message)
 
 			randomNodeCnt = 0
-
 			while randomNodeCnt < GOSSIP_FAN_OUT:
 				randomNode = random.choice(allNodes)
-				if randomNode != self and (randomNode not in self.peerList):	#DONT select myself
+				if randomNode != self and (randomNode not in self.peerList):	
+					#DONT select myself
 					self.peerList.append(randomNode)
 					randomNodeCnt = randomNodeCnt + 1
 
 			for peer in self.peerList:
-				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime <= ev.timeOut:
-					#if ev.stepNumber == REDUCTION_TWO or ev.stepNumber == 3:
-					#print("BlockVote Gossiped to ",peer.nodeId," by ",self.nodeId," at time  = ",ev.evTime)
+				if ev.evTime + delays[self.nodeId][peer.nodeId] - ev.refTime \
+					<= ev.timeOut:
 					self.sendMsg(ev,peer,delays[self.nodeId][peer.nodeId])
 				else:
 					print("More Delay")
@@ -278,10 +256,7 @@ class Node(object):
 			self.peerList.clear()
 			self.sentGossipMessages.append(message)
 		else:
-			#print("Block Prop Message Discarded : already sent via this Node [", self.nodeId, "] at time = ",ev.evTime)
 			pass
-			#pass
-
 
 
 	def ProcessMsg(self, ctxw ,m):
@@ -291,7 +266,6 @@ class Node(object):
 		block = m.block
 
 		# TODO use fastecdsa
-
 		# if not pk.verify(signed_m, str((msg)).encode('utf-8')):
 		# 	print("Verification Failed")
 		# 	return tuple((0,False,False))
@@ -305,38 +279,23 @@ class Node(object):
 		if hprev != H(self.blockChain[len(self.blockChain)-1]):
 			print("hprev is" ,hprev)
 			print("from blockchain" ,H(self.blockChain[len(self.blockChain)-1]))
-			#printBlockchain()
 			print("prev block hash mismatch")
 			return tuple((0,False,False,False,False))
 		else:
-			votes = VerifySort(pk,sortHash,pi,self.seed,self.tau_committee,"hello",ctxw[pk],self.W)
-			#print(self.nodeId," vote = ",votes)
+			votes = VerifySort(pk,sortHash,pi,self.seed,self.tau_committee,\
+				"hello",ctxw[pk],self.W)
 			return tuple((votes,value,sortHash,pk,block))
-			#return 1
 
 	def printBlockchain(self):
-		for bc in self.blockChain:
-			print(bc)
+		for blk in self.blockChain:
+			print(blk)
+	
 	def CountVotes(self, Tstep ,ev):
 		counts = {}
-		#msgs = self.incomingBlockVoteMsg
 		msgs = []
 		if ev.getRoundStepTuple() in self.incomingBlockVoteMsg:
 			msgs = self.incomingBlockVoteMsg[ev.getRoundStepTuple()]
-		#print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",len(msgs))
-		#print(self.nodeId," found ",len(msgs)," no of incoming vote messages")
 		voters = []
-		# TODO parallelize the following while loop
-
-		# nprocs = cpu_count()
-		# pool = Pool(nprocs)
-		# results = list(Pool(processes=nprocs).map(partial(self.ProcessMsg,ctx_Weight),msgs))
-		# pool.close()
-		# print(self.nodeId," processed ",len(results)," block vote messages")
-
-		# Clear the incoming VoteMessage list
-		# Could be used in the next step again
-		#self.incomingBlockVoteMsg.clear()
 		
 		while True:
 			try:
@@ -349,67 +308,44 @@ class Node(object):
 					counts[value] += votes
 				else:
 					counts[value] = votes
-				if counts[value] >= math.floor(Tstep * self.tau_committee): # TODO check this condition fully
-					#print("found ", counts[value], " expected ", math.floor(Tstep * self.tau_committee))
+				if counts[value] >= math.floor(Tstep * self.tau_committee):
 					return (value,block)
 				else:
-					#print("found ",counts[value]," expected ",math.floor(Tstep * self.tau_committee))
 					pass
 			except:
 				return (None , None)
 		if ev.getRoundStepTuple() in self.incomingBlockVoteMsg:
 			self.incomingBlockVoteMsg[ev.getRoundStepTuple()].clear()
-		
-		# for res in results:
-		# 	votes, value, sortHasg, pk, block = res
 
-		# 	if pk in voters or votes == 0:
-		# 		continue
-		# 	voters.append(pk)
-		# 	if value in counts:
-		# 		counts[value] += votes
-		# 	else:
-		# 		counts[value] = votes
-		# 	if counts[value] >= math.floor(Tstep * self.tau_committee): # TODO check this condition fully
-		# 		#print("found ", counts[value], " expected ", math.floor(Tstep * self.tau_committee))
-		# 		return (value,block)
-		# 	else:
-		# 		#print("found ",counts[value]," expected ",math.floor(Tstep * self.tau_committee))
-		# 		pass
 		return (None,None)
 
-
-
-
 	def reductionCountVoteStepOne(self,ev):
-		#print(self.nodeId ," has started Count Vote in reduction step one")
-		#self.CountVotes(T_STEP_REDUCTION_STEP_ONE, ev)
 		hBlockOne,block = self.CountVotes(T_STEP_REDUCTION_STEP_ONE,ev)
 		#print("Reduction step2 starts...")
 
 		if hBlockOne is TIMEOUT:
 			block = self.getEmptyBlock()
-			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,tou_step,H(block),block)
+			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,\
+				tou_step,H(block),block)
 		else:
 			print(self.nodeId, "Got anough vote for (hblock-1)", hBlockOne)
-			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,tou_step,hBlockOne,block)
+			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,\
+				tou_step,hBlockOne,block)
 
 
-	def reductionCommitteVoteStepTwo(self,ev,roundNumber, stepNumber, touCommitte, hBlock,block):
-		# TODO passing ev or not to pass # anyway its working
-		# clearing is important
+	def reductionCommitteVoteStepTwo(self,ev,roundNumber, stepNumber, \
+		touCommitte, hBlock,block):
 		self.sentGossipMessages.clear()
 
 		self.genNextSeed(roundNumber, stepNumber)
-		retval = Sortition(self.secretkey, self.seed, touCommitte, "hello", self.w, self.W)
+		retval = Sortition(self.secretkey, self.seed, touCommitte, "hello", \
+			self.w, self.W)
 		resp = srtnResp(retval[0], retval[1], retval[2])  # TODO remove
 		if resp.j > 0:  # If I have own the committe
-			# push a gossip event on myself that will trigger further gossip
-			#print(self.nodeId, " Reduction step2 starts and I am a committe member with j = ", resp.j)
 			print(self.nodeId,"sortition-reduction-step-two",str(ev.roundNumber))
 			prevBlock = self.blockChain[len(self.blockChain) - 1]
 			prevBlockHash = H(prevBlock)
-			thisBlockHash = hBlock  # this could be empty or non empty also
+			thisBlockHash = hBlock
 
 			blockVoteMsg = BlockVoteMsg(self.publickey,
 										self.secretkey,
@@ -429,13 +365,12 @@ class Node(object):
 							 self,
 							 self,
 							 roundNumber,
-							 stepNumber)  # step = 1
+							 stepNumber)
 
 			eventQ.add(newEvent)
 		else:
-			#print(self.nodeId," lose the second round of committe vote")
 			pass
-		# Push the reduction step 2 cound vote event after +3 sec
+
 		newEvent2 = Event(ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
 						  ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
 						  EventType.REDUCTION_COUNT_VOTE_STEP_TWO,
@@ -448,7 +383,6 @@ class Node(object):
 		eventQ.add(newEvent2)
 
 	def reductionCountVoteStepTwo(self,ev):
-		#print("Reduction step2 Count Vote started at time ", ev.evTime)
 		hBlockTwo,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)
 		if hBlockTwo == TIMEOUT:
 			print(self.nodeId, "hblock-2 TIMEOUT")
@@ -463,11 +397,12 @@ class Node(object):
 
 
 	def BAstarPhaseOne(self,ev,stepNumber):
-		#print("BA* phase 1 started step = ",ev.stepNumber)
-		self.BAstartCommitteVote(ev,ev.roundNumber,stepNumber,tou_step,INVOKE_BA_START_COUNT_VOTE_ONE,self.bastarBlockHash,self.bastarBlock)
+		self.BAstartCommitteVote(ev,ev.roundNumber,stepNumber,tou_step,\
+			INVOKE_BA_START_COUNT_VOTE_ONE,self.bastarBlockHash,self.bastarBlock)
 
 
-	def BAstartCommitteVote(self,ev,roundNumber,stepNumber,touCommitte,flag,block_hash,block):
+	def BAstartCommitteVote(self,ev,roundNumber,stepNumber,touCommitte,flag,\
+		block_hash,block):
 		if flag == INVOKE_BA_START_COUNT_VOTE_ONE and stepNumber >= MAX_STEPS:
 			print("***********************************************")
 			self.bastarOutput = self.getEmptyHash()
@@ -485,18 +420,15 @@ class Node(object):
 			eventQ.add(newEvent)
 			return
 
-		# flag will decide which countVote event to push after this committe vote is over
-		# TODO passing ev or not to pass # anyway its working
-		# clearing is important
 		self.sentGossipMessages.clear()
 
 		self.genNextSeed(roundNumber, stepNumber)
-		retval = Sortition(self.secretkey, self.seed, touCommitte, "hello", self.w, self.W)
+		retval = Sortition(self.secretkey, self.seed, touCommitte, "hello",\
+				self.w, self.W)
 		resp = srtnResp(retval[0], retval[1], retval[2])  # TODO remove
 		if resp.j > 0:  # If I have own the committe
-			# push a gossip event on myself that will trigger further gossip
-			#print(self.nodeId, "BA* step ",stepNumber,"and round =",roundNumber," : selected as committe member with j = ", resp.j)
-			print(self.nodeId,"sortition-bastar-step",str(ev.stepNumber),"round",str(ev.roundNumber))
+			print(self.nodeId,"sortition-bastar-step",str(ev.stepNumber),\
+				"round",str(ev.roundNumber))
 			prevBlock = self.blockChain[len(self.blockChain) - 1]
 			prevBlockHash = H(prevBlock)
 			thisBlockHash = block_hash  # this could be empty or non empty also
@@ -515,7 +447,7 @@ class Node(object):
 							 ev.evTime,
 							 EventType.BLOCK_VOTE_GOSSIP_EVENT,
 							 blockVoteMsg,
-							 BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT, # TODO change this timeout or check
+							 BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT,
 							 self,
 							 self,
 							 roundNumber,
@@ -523,10 +455,8 @@ class Node(object):
 
 			eventQ.add(newEvent)
 		else:
-			#print(self.nodeId," lose the ",roundNumber," round and ",stepNumber," step of committe vote")
 			pass
-		# TODO all of the following timeout valus are not correct
-		# TODO these are somehow working only
+
 		if flag == INVOKE_BA_START_COUNT_VOTE_ONE:
 			# Push the reduction step 2 cound vote event after +3 sec
 			newEvent2 = Event(ev.evTime + BA_STAR_GOSSIP_TIMEOUT + 1,
@@ -552,7 +482,6 @@ class Node(object):
 							  stepNumber)
 			eventQ.add(newEvent2)
 		elif flag == INVOKE_BA_START_COUNT_VOTE_THREE:
-			# Push the reduction step 2 cound vote event after +3 sec
 			newEvent2 = Event(ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
 							  ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
 							  EventType.BASTAR_COUNT_VOTE_THREE,
@@ -564,40 +493,26 @@ class Node(object):
 							  stepNumber)
 			eventQ.add(newEvent2)
 		elif flag == DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE:
-			#print(self.nodeId," Not creating any more count vote step ", ev.roundNumber," ends.")
 			pass
 		else:
-			#print(self.nodeId, " Unknown flag received")
 			pass
 
 	def BAstartCountVoteOne(self,ev):
-		print(self.nodeId, " BA* Count Vote ONE is executing in step = ",ev.stepNumber)
+		print(self.nodeId, " BA* Count Vote ONE is executing in step = "\
+			,ev.stepNumber)
 		step = ev.stepNumber
-		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev) # TODO T_STEP check
+		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)
 		if r is TIMEOUT:
-			r = self.bastarBlockHash # we are using self.bastarBlockHash instead of block_hash
-			#print("BAstartCountVoteOne getting timeout")
+			r = self.bastarBlockHash
 			block = self.bastarBlock
 		elif r is not self.getEmptyHash():
 			for s in range(ev.stepNumber,ev.stepNumber + 3):
-				self.BAstartCommitteVote(ev,ev.roundNumber,s,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)
+				self.BAstartCommitteVote(ev,ev.roundNumber,s,tou_step,\
+					DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)
 			if step == 3:
-				self.BAstartCommitteVote(ev,ev.roundNumber,FINAL_STEP,tou_final,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)	# use a committe vote
-			#print("This is the final agreed value of hash = ",r," round ends.")
+				self.BAstartCommitteVote(ev,ev.roundNumber,FINAL_STEP,\
+					tou_final,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)
 
-			# Push the next sortion event
-			# Push the next sortion event
-			# newEvent = Event(ev.evTime + 1,
-			# 				 ev.evTime + 1,
-			# 				 EventType.BLOCK_PROPOSER_SORTITION_EVENT,
-			# 				 noMessage(),
-			# 				 TIMEOUT_NOT_APPLICABLE,
-			# 				 self,
-			# 				 self,
-			# 				 ev.roundNumber + 1,
-			# 				 0)  # Initial step Number
-
-			# eventQ.add(newEvent)
 			self.bastarOutput = r
 			self.bastarBlock = block
 			newEvent = Event(ev.evTime + 1,
@@ -617,13 +532,15 @@ class Node(object):
 			print("Need to move forward")
 
 		step += 1
-		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_TWO,r,block)
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,\
+			INVOKE_BA_START_COUNT_VOTE_TWO,r,block)
 
 
 	def BAstartCountVoteTwo(self,ev):
-		print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
+		print(self.nodeId, " BA* Count Vote two is executing in step = ",\
+			ev.stepNumber)
 		step = ev.stepNumber
-		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
+		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)
 		if r is TIMEOUT:
 			r = self.getEmptyHash()
 			block = self.getEmptyBlock()
@@ -632,10 +549,9 @@ class Node(object):
 				# vote on the empty block
 				# send an empty block also
 				block = self.getEmptyBlock()
-				self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)
-			#print("This is the final agreed value of hash (empty block hash) = ", r," round ends.")
+				self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,\
+					DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)
 
-			# Push the Final count vote event
 			self.bastarOutput = r
 			self.bastarBlock = block
 			newEvent = Event(ev.evTime + 1,
@@ -652,8 +568,8 @@ class Node(object):
 			return
 
 		step += 1
-		# Try to vote on a empty block
-		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_THREE,r,block)
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,\
+								INVOKE_BA_START_COUNT_VOTE_THREE,r,block)
 
 	def finalCountVote(self,ev):
 		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
@@ -663,20 +579,21 @@ class Node(object):
 				print("Added block was empty")
 			self.bastarBlock.state = FINAL_CONSENSUS
 			self.blockChain.append(self.bastarBlock)
-			print("[FINAL",str(self.nodeId),"](new block added)=", H(self.bastarBlock), "in round =",ev.roundNumber ,"at time" , ev.evTime)
-			print(str(self.nodeId),"Block transaction ",self.bastarBlock.transactions )
+			print("[FINAL",str(self.nodeId),"](new block added)=", \
+					H(self.bastarBlock), "in round =",ev.roundNumber \
+					,"at time" , ev.evTime)
+			# print(str(self.nodeId),"Block transaction ",\
+			# 	self.bastarBlock.transactions )
 		else:
-			print("[TENTATIVE",str(self.nodeId),"](new block added)=", H(self.bastarBlock), "in round =",ev.roundNumber ,"at time" , ev.evTime)
-			print(str(self.nodeId),"Block transaction ",self.bastarBlock.transactions )
+			print("[TENTATIVE",str(self.nodeId),"](new block added)=",\
+				H(self.bastarBlock), "in round =",ev.roundNumber ,"at time" ,\
+				ev.evTime)
+			# print(str(self.nodeId),"Block transaction ",\
+			# 	self.bastarBlock.transactions )
 			if r == self.getEmptyHash():
 				print("Added block was empty")
 			self.bastarBlock.state = TENTATIVE_CONSENSUS
 			self.blockChain.append(self.bastarBlock)
-			# if r == self.getEmptyHash():
-			# 	print("Added block was empty")
-			# elif r == None:
-			# 	print("#########################")
-			# add tentative flag later
 
 		# newEvent = Event(ev.evTime + 1,
 		# 					ev.evTime + 1,
@@ -692,9 +609,10 @@ class Node(object):
 		
 
 	def BAstartCountVoteThree(self,ev):
-		print(self.nodeId, " BA* Count Vote two is executing in step = ",ev.stepNumber)
+		print(self.nodeId, " BA* Count Vote two is executing in step = ",\
+				ev.stepNumber)
 		step = ev.stepNumber
-		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
+		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev) 
 		if r is TIMEOUT:
 			if self.commonCoin(ev.roundNumber,step,tou_step) == 0:
 				r = self.bastarBlockHash
@@ -704,7 +622,8 @@ class Node(object):
 				block = self.getEmptyBlock()
 
 		step += 1
-		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,INVOKE_BA_START_COUNT_VOTE_ONE,r,block)
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,\
+								INVOKE_BA_START_COUNT_VOTE_ONE,r,block)
 
 
 	def commonCoin(self,roundNumber,stepNumber,touStep):
@@ -718,7 +637,8 @@ class Node(object):
 		# nprocs = cpu_count()
 		# pool = Pool(nprocs)
 		# results = list(pool.map(partial(self.ProcessMsg, ctx_Weight), msgs))
-		# print(self.nodeId, " processed ", len(results), " block vote messages for common coin")
+		# print(self.nodeId, " processed ", len(results), " \
+		# block vote messages for common coin")
 		# pool.close()
 
 		while True:
@@ -726,13 +646,12 @@ class Node(object):
 				m = msgs.pop()
 				votes, value, sortHasg, pk, block = self.ProcessMsg(ctx_Weight,m)
 				for j in range(0,votes):
-					h = H(str(sortHash) + str(j))  # TODO check the type of sortHash
+					h = H(str(sortHash) + str(j)) 
 					if int(h,16) < minHash:
 						minHash = h
 			except:
 				print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 				break
-			#pass
 
 		if (roundNumber,stepNumber) in self.incomingBlockVoteMsg:
 			self.incomingBlockVoteMsg[(roundNumber,stepNumber)].clear()
@@ -815,9 +734,6 @@ class Node(object):
 
 			eventQ.add(newEvent)
 
-		# Push a special event at time +4 seconds
-		# in that event this node will decide whether it is top proposer of not
-		# and then if true, it will propose a block
 		newEvent = Event(ev.refTime + PRIORITY_GOSSIP_TIMEOUT + 1,
 							ev.evTime + PRIORITY_GOSSIP_TIMEOUT + 1,
 							EventType.SELECT_TOP_PROPOSER_EVENT,
@@ -832,9 +748,3 @@ class Node(object):
 
 	def hangForever(self):
 		print("Hang Forever called")
-
-	def printStorage(self):
-		print("size of incomingProposedBlocks[] = ",len(self.incomingProposedBlocks))
-		print("size of sentGossipMessages[] = ", len(self.sentGossipMessages))
-		print("size of priorityList[] = ", len(self.priorityList))
-		print("size of incomingBlockVoteMsg[] = ", len(self.incomingBlockVoteMsg))
