@@ -31,3 +31,4 @@
           
           You can delete generated key and delays file using the command git clean -f
 
+![Simulation](https://github.com/ddeka0/CS620-Algorand-DES/blob/master/algorand.gif)
