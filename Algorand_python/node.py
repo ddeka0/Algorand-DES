@@ -6,6 +6,7 @@ from multiprocessing import  Pool,cpu_count
 from functools import partial
 import math
 
+
 class Node(object):
 	def __init__(self, Id, secretkey, publickey, w):
 		self.secretkey = secretkey
@@ -105,8 +106,9 @@ class Node(object):
 				print(self.nodeId,"sortition-top-proposer-round",str(ev.roundNumber))
 				MyPriorityMsg = res[1]
 			else:
-				print(self.nodeId,"For me (",res[0].nodeId,") is topProposer and ",res[1].priority," is my priority")
-
+				#print(self.nodeId,"For me (",res[0].nodeId,") is topProposer and ",res[1].priority," is my priority")
+				pass
+		
 		if IamTopProposer is not None:
 			# I need to create a block and gossip to the network
 			prevBlock = self.blockChain[len(self.blockChain) - 1]
@@ -661,12 +663,10 @@ class Node(object):
 				print("Added block was empty")
 			self.bastarBlock.state = FINAL_CONSENSUS
 			self.blockChain.append(self.bastarBlock)
-			print(">>>>>>>>>>>>>[FINAL",str(self.nodeId),"]New Block added with hash = ",H(self.bastarBlock), " in round = ",ev.roundNumber , " ev time " ,ev.evTime )
+			print("[FINAL",str(self.nodeId),"](new block added)=", H(self.bastarBlock), "in round =",ev.roundNumber ,"at time" , ev.evTime)
 			print(str(self.nodeId),"Block transaction ",self.bastarBlock.transactions )
-			
-			# add final flag later
 		else:
-			print(">>>>>>>>>>>>>[TENTATIVE",str(self.nodeId)," ]New Block added with hash = ", H(self.bastarBlock), " in round = ",ev.roundNumber , " ev time " , ev.evTime)
+			print("[TENTATIVE",str(self.nodeId),"](new block added)=", H(self.bastarBlock), "in round =",ev.roundNumber ,"at time" , ev.evTime)
 			print(str(self.nodeId),"Block transaction ",self.bastarBlock.transactions )
 			if r == self.getEmptyHash():
 				print("Added block was empty")
@@ -763,23 +763,25 @@ class Node(object):
 
 		self.peerList.clear()
 		self.sentGossipMessages.clear()
+		
+
 		self.incomingBlockVoteMsg.clear()
 
 		# REcovery protocol to handle inconsistent blockchains of nodes
-		block_to_add = None
-		for node in allNodes:
-			if node.blockChain[-1].state == FINAL_CONSENSUS:
-				block_to_add = node.blockChain[-1]
+		# block_to_add = None
+		# for node in allNodes:
+		# 	if node.blockChain[-1].state == FINAL_CONSENSUS:
+		# 		block_to_add = node.blockChain[-1]
 		
-		if block_to_add is not None:
-			for i in range(len(allNodes)):
-				allNodes[i].blockChain[-1] = block_to_add
-		else:
-			prevHash = allNodes[0].blockChain[-1].prevBlockHash
-			newBlock = Block("Empty",prevHash)
-			newBlock.state = FINAL_CONSENSUS 
-			for i in range(len(allNodes)):
-				allNodes[i].blockChain[-1] = newBlock
+		# if block_to_add is not None:
+		# 	for i in range(len(allNodes)):
+		# 		allNodes[i].blockChain[-1] = block_to_add
+		# else:
+		# 	prevHash = allNodes[0].blockChain[-1].prevBlockHash
+		# 	newBlock = Block("Empty",prevHash)
+		# 	newBlock.state = FINAL_CONSENSUS 
+		# 	for i in range(len(allNodes)):
+		# 		allNodes[i].blockChain[-1] = newBlock
 
 		# TODO clear all list from all keys
 

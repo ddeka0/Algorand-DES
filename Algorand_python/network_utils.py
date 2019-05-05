@@ -9,6 +9,7 @@ import ecdsa
 import hashlib
 import secrets
 import pickle
+import sys
 
 delays = []
 eventQ = SortedList()
@@ -59,7 +60,7 @@ TENTATIVE_CONSENSUS		 	= "tentative"
 FINAL_CONSENSUS		 		= "final"
 NO_CONSENSUS		 		= "no_consensus"
 
-GOSSIP_FAN_OUT 			= 3
+GOSSIP_FAN_OUT 			= 10
 T_STEP_REDUCTION_STEP_ONE = 2/3
 T_STEP_REDUCTION_STEP_TWO = 2/3
 
@@ -102,7 +103,6 @@ class priorityMessage(object):
 		self.sourceNode = sourceNode
 
 	def __str__(self):
-		#return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
 		return "\n" + "roundNumber = " + str(self.roundNumber) + "\n" \
 				+ "hashOutput = " + str(self.hashOutput) + "\n" \
 				+ "subUserIndex = " + str(self.subUserIndex) + "\n" \
@@ -112,7 +112,8 @@ class noMessage(object):
 	def __init__(self):
 		pass
 	def __str__(self):
-		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
+		return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item 
+			in self.__dict__))
 
 
 def init_Delays():
@@ -122,42 +123,9 @@ def init_Delays():
 	all_delays=[]
 	with open('delays-'+  str(MAX_NODES), 'rb') as f:
 		all_delays = pickle.load(f)
-	
-
-	# for i in range(MAX_NODES):
-	# 	lz = [0] * MAX_NODES
-	# 	delays.append(lz)
 
 	delays.extend(all_delays[0])
-	# print(delays)
 	blockDelays.extend(all_delays[1])
-	# for i in range(MAX_NODES):
-	# 	lz = [0] * MAX_NODES
-	# 	blockDelays.append(lz)
-
-	
-	# for i in allNodes:
-	# 	for j in allNodes:
-	# 		if i == j:
-	# 			delays[i.nodeId][j.nodeId] = 0
-	# 		else:
-	# 			#normal_delay = np.random.normal(200,400,1)
-	# 			normal_delay = np.random.normal(40,64,1)
-	# 			normal_delay = list(normal_delay)[0]
-	# 			delays[i.nodeId][j.nodeId] = max(MIN_DELAY,normal_delay)/DIVIDE_BY  # TODO: change value here
-
-	# for i in range(MAX_NODES):
-	# 	lz = [0] * MAX_NODES
-	# 	blockDelays.append(lz)
-
-	# for i in allNodes:
-	# 	for j in allNodes:
-	# 		if i == j:
-	# 			blockDelays[i.nodeId][j.nodeId] = 0
-	# 		else:
-	# 			normal_delay = np.random.normal(30,64,1)
-	# 			normal_delay = list(normal_delay)[0]
-	# 			blockDelays[i.nodeId][j.nodeId] = max(MIN_DELAY,normal_delay)/DIVIDE_BY
 
 
 def init_AsymmtericKeys(listsk, listpk):
@@ -166,6 +134,7 @@ def init_AsymmtericKeys(listsk, listpk):
 	listsk.extend(keys[0])
 	listpk.extend(keys[1])
 	pickleFile.close()
+
 
 def init_w(ctx_Weight,pk_list):
 	for i in pk_list:
@@ -193,16 +162,14 @@ class Block(object):
 		self.state = NO_CONSENSUS
 
 	def __str__(self):
-		#return '\n'.join(('{} = {}'.format(item, self.__dict__[item]) for item in self.__dict__))
 		return "\n" + "transactions = " + str(self.transactions) + "\t" \
 				+ "prevBlockHash = " + str(self.prevBlockHash)
 
 class BlockProposeMsg(object):
 	def __init__(self,prevBlockHash, thisBlockContent, priorityMsgPayload):
 		self.block = Block(thisBlockContent,prevBlockHash)
-		# start of Node's priority payload
 		self.priorityMsgPayload = priorityMsgPayload
-		self.sourceNode = self # TODO check
+		self.sourceNode = self
 
 	def __str__(self):
 		return "\n" + "block = " + str(self.block) + "\n" \
@@ -233,7 +200,11 @@ class BlockVoteMsg(object):
 		# actual VoteMsg : will be used for verification of the digest
 		self.sgnVoteMsg = (digest,msg)
 		self.block = block
+
+		
 def H(block):
 	return (hashlib.sha256(str(block).encode())).hexdigest()
+
+
 
 
