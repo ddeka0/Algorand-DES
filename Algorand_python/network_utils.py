@@ -19,7 +19,7 @@ w_list = []
 ctx_Weight = {}
 blockDelays=[]
 
-MAX_NODES = 50
+MAX_NODES = 256
 TIMEOUT = None
 
 ROUNDS = 5 ################

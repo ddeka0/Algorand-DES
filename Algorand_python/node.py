@@ -15,7 +15,7 @@ class Node(object):
 		self.w = w
 		self.priorityGossipFound = False
 		self.priorityList = []
-		self.tau = MAX_NODES * 0.1 # 10 percent
+		self.tau = 1 # 10 percent
 		#self.tau = 5  # 10 percent
 		self.tau_committee = tou_step  # 20 percent
 		self.W = MAX_NODES * (MAX_ALGORAND / 2)

@@ -82,12 +82,13 @@ if __name__ == "__main__":
 	for i in range(MAX_NODES):
 		allNodes.append(Node(i,sk_List[i],pk_List[i],ctx_Weight[pk_List[i]]))
 
-    #2.3 fail stop adversary
-	for i in range(MAX_NODES):
-		random_number = random.randint(1, 1000)
-		if random_number < 50 :
-			allNodes[i].isAdversary=True
-			print("Hi I am adversary",allNodes[i].nodeId)
+         #2.3 fail stop adversary
+        
+        #for i in range(MAX_NODES):
+	#	random_number = random.randint(1, 1000)
+	#	if random_number < 50 :
+	#		allNodes[i].isAdversary=True
+	#		print("Hi I am adversary",allNodes[i].nodeId)
 			
 	init_Delays()
 
@@ -95,7 +96,7 @@ if __name__ == "__main__":
 
 	#print(delays)
 	custom_time=0
-	for i in range(10):
+	for i in range(40):
 		custom_time = 400*i 
 		for node in allNodes:
 			#print("pushed new event")
