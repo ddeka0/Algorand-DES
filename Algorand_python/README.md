@@ -28,4 +28,6 @@
           -tfinal TOU_FINAL     set tou_final
           -st MAX_ALGORAND      set MAX_ALGORAND
           --version             show program's version number and exit
+          
+          You can delete generated key and delays file using the command git clean -f
 
