@@ -115,6 +115,3 @@ def test_Sortition_two():
 	plt.bar(final.keys(), final.values(), label="line 1",)
 	plt.savefig("2.1.2-64.svg")
 	plt.show()
-
-
-test_Sortition_two()

@@ -1,15 +1,12 @@
 # !/bin/python3
 from node import *
-from network_utils import *
+from network_utils import EventType,eventQ,sk_List,pk_List,ctx_Weight,noMessage
+from arg_parser import getUserArguments
 import signal
 import time
+import config
 
 def executeEvent(ev):
-
-	#print("got eventType = ",ev.evType," for targetNode ",ev.targetNode.nodeId)
-	#print("got eventTime = ", ev.evTime, " for targetNode ", ev.targetNode.nodeId)
-	#print("got refTime = ", ev.refTime, " for targetNode ", ev.targetNode.nodeId)
-
 	eventType = ev.evType
 	targetNode = ev.targetNode
 
@@ -80,10 +77,17 @@ if __name__ == "__main__":
 	
 	signal.signal(signal.SIGINT, handler)
 
+	args = getUserArguments()
+	initControlParams(args)
+
+	print("GOSSIP_FAN_OUT = ",config.GOSSIP_FAN_OUT)
+	print("max_nodes", config.MAX_NODES)
+
 	init_AsymmtericKeys(sk_List,pk_List)
-	print("max nodes in Algorand Network ", len(sk_List))
 	init_w(ctx_Weight,pk_List)
-	for i in range(MAX_NODES):
+	
+
+	for i in range(config.MAX_NODES):
 		allNodes.append(Node(i,sk_List[i],pk_List[i],ctx_Weight[pk_List[i]]))
 
 	#2.3 fail stop adversary
@@ -102,22 +106,20 @@ if __name__ == "__main__":
 	#		print("Hi I am byzantine",allNodes[i].nodeId)
 	
 
-	init_Delays()
+	init_Delays(delays,blockDelays)
 
-	custom_time=0
-	for i in range(16):
-		custom_time = 400*i 
-		for node in allNodes:
-			newEvent = Event(custom_time,
-							custom_time,
-							EventType.BLOCK_PROPOSER_SORTITION_EVENT,
-							noMessage(),
-							TIMEOUT_NOT_APPLICABLE,
-							node,
-							node,
-							i+1,
-							0)
-			eventQ.add(newEvent)
+	for node in allNodes:
+		newEvent = Event(0,
+						0,
+						EventType.BLOCK_PROPOSER_SORTITION_EVENT,
+						noMessage(),
+						config.TIMEOUT_NOT_APPLICABLE,
+						node,
+						node,
+						1,
+						0)
+
+		eventQ.add(newEvent)
 
 	while(True):
 		if len(eventQ) == 0:
@@ -125,3 +127,4 @@ if __name__ == "__main__":
 		ev = eventQ.pop(0)
 		executeEvent(ev)
 	print("Simulation completed !")
+

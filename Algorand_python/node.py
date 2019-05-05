@@ -4,7 +4,8 @@ from network_utils import*
 from multiprocessing import  Pool,cpu_count
 from functools import partial
 import math
-
+import config
+from logging_config import * 
 
 class Node(object):
 	def __init__(self, Id, secretkey, publickey, w):
@@ -17,16 +18,16 @@ class Node(object):
 		self.priorityList = []
 		#self.tau = MAX_NODES * 0.1 # 10 percent
 		#self.tau = 5  # 10 percent
-		self.tau = 15 #this is for 2.2.4
-		self.tau_committee = tou_step  # 20 percent
-		self.W = MAX_NODES * (MAX_ALGORAND / 2)
+		self.tau = config.tou_prop #this is for 2.2.4
+		self.tau_committee = config.tou_step  # 20 percent
+		self.W = config.MAX_NODES * (config.MAX_ALGORAND / 2)
 		self.sentGossipMessages = []
 		self.blockChain = []
 		self.seed = "HASHOFPREVIOUSBLOCK" 
 		# TODO: compute hash for different rounds
 		# Set Genesis Block
-		genesisBlock = Block(GENESIS_BLOCK_CONTENT)
-		genesisBlock.state = FINAL_CONSENSUS
+		genesisBlock = Block(config.GENESIS_BLOCK_CONTENT)
+		genesisBlock.state = config.FINAL_CONSENSUS
 		self.blockChain.append(genesisBlock)
 		
 		self.incomingProposedBlocks = []	
@@ -74,7 +75,7 @@ class Node(object):
 				print("This code should never be executed")
 
 			randomNodeCnt = 0
-			while randomNodeCnt < GOSSIP_FAN_OUT:
+			while randomNodeCnt < config.GOSSIP_FAN_OUT:
 				randomNode = random.choice(allNodes)
 				if randomNode != self and (randomNode not in self.peerList):
 					#DONT select myself
@@ -107,8 +108,8 @@ class Node(object):
 			if res[0].nodeId == self.nodeId:
 				IamTopProposer = True
 				MyPriority = res[1].priority
-				print(self.nodeId,"sortition-top-proposer-round",\
-					str(ev.roundNumber))
+				print(BOLDYELLOW("=>"),self.nodeId,"sortition-top-proposer-round",\
+					str(ev.roundNumber),RESET(""))
 				MyPriorityMsg = res[1]
 			else:
 				pass
@@ -124,7 +125,7 @@ class Node(object):
 							 ev.evTime,
 							 EventType.BLOCK_PROPOSE_GOSSIP_EVENT,
 							 newBlockPropMsg,
-							 BLOCK_PROPOSE_GOSSIP_TIMEOUT,
+							 config.BLOCK_PROPOSE_GOSSIP_TIMEOUT,
 							 self,
 							 self,
 							 ev.roundNumber,
@@ -136,11 +137,11 @@ class Node(object):
 		self.priorityGossipFound = False
 		self.priorityList.clear()
 
-		newEvent = Event(ev.evTime + BLOCK_PROPOSE_GOSSIP_TIMEOUT + 1,
-						ev.evTime + BLOCK_PROPOSE_GOSSIP_TIMEOUT + 1,
+		newEvent = Event(ev.evTime + config.BLOCK_PROPOSE_GOSSIP_TIMEOUT + 1,
+						ev.evTime + config.BLOCK_PROPOSE_GOSSIP_TIMEOUT + 1,
 						EventType.REDUCTION_COMMITTEE_VOTE_STEP_ONE,
 						noMessage(),
-						TIMEOUT_NOT_APPLICABLE,
+						config.TIMEOUT_NOT_APPLICABLE,
 						self,
 						self,
 						ev.roundNumber,
@@ -154,7 +155,7 @@ class Node(object):
 			message = ev.msgToDeliver
 			self.incomingProposedBlocks.append(message)
 			randomNodeCnt = 0
-			while randomNodeCnt < GOSSIP_FAN_OUT:
+			while randomNodeCnt < config.GOSSIP_FAN_OUT:
 				randomNode = random.choice(allNodes)
 				if randomNode != self and (randomNode not in self.peerList):	
 					#DONT select myself
@@ -190,8 +191,8 @@ class Node(object):
 				 "hello", self.w, self.W)
 			resp = srtnResp(retval[0],retval[1],retval[2]) # TODO remove
 			if resp.j > 0: # If I have own the committe
-				print(self.nodeId,"sortition-reduction-step-one",\
-					str(ev.roundNumber))
+				#print(BOLDGREEN("=>"),self.nodeId,"sortition-reduction-step-one",\
+				#	str(ev.roundNumber),RESET(""))
 				prevBlock = self.blockChain[len(self.blockChain) - 1]
 				prevBlockHash = H(prevBlock)
 				thisBlockHash = hashlib.sha256(maxPropBlockMsg.block.__str__()\
@@ -211,7 +212,7 @@ class Node(object):
 								ev.evTime,
 								EventType.BLOCK_VOTE_GOSSIP_EVENT,
 								blockVoteMsg,
-								BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT,
+								config.BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT,
 								self,
 								self,
 								ev.roundNumber,
@@ -219,11 +220,11 @@ class Node(object):
 
 				eventQ.add(newEvent)
 
-		newEvent2 = Event(ev.evTime + BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT + 1,
-						ev.evTime + BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT + 1,
+		newEvent2 = Event(ev.evTime + config.BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT + 1,
+						ev.evTime + config.BLOCK_VOTE_REDUCTION_S1_GOSSIP_TIMEOUT + 1,
 						EventType.REDUCTION_COUNT_VOTE_STEP_ONE,
 						noMessage(),
-						TIMEOUT_NOT_APPLICABLE,
+						config.TIMEOUT_NOT_APPLICABLE,
 						self,
 						self,
 						ev.roundNumber,
@@ -239,7 +240,7 @@ class Node(object):
 			self.incomingBlockVoteMsg[ev.getRoundStepTuple()].append(message)
 
 			randomNodeCnt = 0
-			while randomNodeCnt < GOSSIP_FAN_OUT:
+			while randomNodeCnt < config.GOSSIP_FAN_OUT:
 				randomNode = random.choice(allNodes)
 				if randomNode != self and (randomNode not in self.peerList):	
 					#DONT select myself
@@ -320,17 +321,17 @@ class Node(object):
 		return (None,None)
 
 	def reductionCountVoteStepOne(self,ev):
-		hBlockOne,block = self.CountVotes(T_STEP_REDUCTION_STEP_ONE,ev)
+		hBlockOne,block = self.CountVotes(config.T_STEP_REDUCTION_STEP_ONE,ev)
 		#print("Reduction step2 starts...")
 
-		if hBlockOne is TIMEOUT:
+		if hBlockOne is config.TIMEOUT:
 			block = self.getEmptyBlock()
-			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,\
-				tou_step,H(block),block)
+			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,config.REDUCTION_TWO,\
+				config.tou_step,H(block),block)
 		else:
-			print(self.nodeId, "Got anough vote for (hblock-1)", hBlockOne)
-			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,REDUCTION_TWO,\
-				tou_step,hBlockOne,block)
+			print(self.nodeId, "Got anough vote for (hblock-1)", BOLDGREEN(hBlockOne),RESET(""))
+			self.reductionCommitteVoteStepTwo(ev,ev.roundNumber,config.REDUCTION_TWO,\
+				config.tou_step,hBlockOne,block)
 
 
 	def reductionCommitteVoteStepTwo(self,ev,roundNumber, stepNumber, \
@@ -342,7 +343,7 @@ class Node(object):
 			self.w, self.W)
 		resp = srtnResp(retval[0], retval[1], retval[2])  # TODO remove
 		if resp.j > 0:  # If I have own the committe
-			print(self.nodeId,"sortition-reduction-step-two",str(ev.roundNumber))
+			print(BOLDYELLOW("=>"),self.nodeId,"sortition-reduction-step-two at round",str(ev.roundNumber),RESET(""))
 			prevBlock = self.blockChain[len(self.blockChain) - 1]
 			prevBlockHash = H(prevBlock)
 			thisBlockHash = hBlock
@@ -361,7 +362,7 @@ class Node(object):
 							 ev.evTime,
 							 EventType.BLOCK_VOTE_GOSSIP_EVENT,
 							 blockVoteMsg,
-							 BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT,
+							 config.BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT,
 							 self,
 							 self,
 							 roundNumber,
@@ -371,11 +372,11 @@ class Node(object):
 		else:
 			pass
 
-		newEvent2 = Event(ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
-						  ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
+		newEvent2 = Event(ev.evTime + config.BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
+						  ev.evTime + config.BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
 						  EventType.REDUCTION_COUNT_VOTE_STEP_TWO,
 						  noMessage(),
-						  TIMEOUT_NOT_APPLICABLE,
+						  config.TIMEOUT_NOT_APPLICABLE,
 						  self,
 						  self,
 						  roundNumber,
@@ -383,13 +384,13 @@ class Node(object):
 		eventQ.add(newEvent2)
 
 	def reductionCountVoteStepTwo(self,ev):
-		hBlockTwo,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)
-		if hBlockTwo == TIMEOUT:
+		hBlockTwo,block = self.CountVotes(config.T_STEP_REDUCTION_STEP_TWO, ev)
+		if hBlockTwo == config.TIMEOUT:
 			print(self.nodeId, "hblock-2 TIMEOUT")
 			self.bastarBlockHash = self.getEmptyHash()
 			self.bastarBlock = self.getEmptyBlock()
 		else:
-			print(self.nodeId, "Got anough vote for (hblock-2)", hBlockTwo)
+			print(self.nodeId, "Got anough vote for (hblock-2)", BOLDGREEN(hBlockTwo),RESET(""))
 			self.bastarBlockHash = hBlockTwo
 			self.bastarBlock = block
 
@@ -397,13 +398,13 @@ class Node(object):
 
 
 	def BAstarPhaseOne(self,ev,stepNumber):
-		self.BAstartCommitteVote(ev,ev.roundNumber,stepNumber,tou_step,\
+		self.BAstartCommitteVote(ev,ev.roundNumber,stepNumber,config.tou_step,\
 			INVOKE_BA_START_COUNT_VOTE_ONE,self.bastarBlockHash,self.bastarBlock)
 
 
 	def BAstartCommitteVote(self,ev,roundNumber,stepNumber,touCommitte,flag,\
 		block_hash,block):
-		if flag == INVOKE_BA_START_COUNT_VOTE_ONE and stepNumber >= MAX_STEPS:
+		if flag == INVOKE_BA_START_COUNT_VOTE_ONE and stepNumber >= config.MAX_STEPS:
 			print("***********************************************")
 			self.bastarOutput = self.getEmptyHash()
 			self.bastarBlock = self.getEmptyBlock()
@@ -411,11 +412,11 @@ class Node(object):
 							ev.evTime + 1,
 							EventType.FINAL_COUNT_VOTE,
 							noMessage(),
-							TIMEOUT_NOT_APPLICABLE,
+							config.TIMEOUT_NOT_APPLICABLE,
 							self,
 							self,
 							ev.roundNumber,
-							FINAL_STEP)
+							config.FINAL_STEP)
 
 			eventQ.add(newEvent)
 			return
@@ -427,8 +428,8 @@ class Node(object):
 				self.w, self.W)
 		resp = srtnResp(retval[0], retval[1], retval[2])  # TODO remove
 		if resp.j > 0:  # If I have own the committe
-			print(self.nodeId,"sortition-bastar-step",str(ev.stepNumber),\
-				"round",str(ev.roundNumber))
+			print(BOLDMAGENTA("=>"),self.nodeId,"sortition-bastar-step",str(ev.stepNumber),\
+				"round",str(ev.roundNumber),RESET(""))
 			prevBlock = self.blockChain[len(self.blockChain) - 1]
 			prevBlockHash = H(prevBlock)
 			thisBlockHash = block_hash  # this could be empty or non empty also
@@ -447,7 +448,7 @@ class Node(object):
 							 ev.evTime,
 							 EventType.BLOCK_VOTE_GOSSIP_EVENT,
 							 blockVoteMsg,
-							 BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT,
+							 config.BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT,
 							 self,
 							 self,
 							 roundNumber,
@@ -459,11 +460,11 @@ class Node(object):
 
 		if flag == INVOKE_BA_START_COUNT_VOTE_ONE:
 			# Push the reduction step 2 cound vote event after +3 sec
-			newEvent2 = Event(ev.evTime + BA_STAR_GOSSIP_TIMEOUT + 1,
-							  ev.evTime + BA_STAR_GOSSIP_TIMEOUT + 1,
+			newEvent2 = Event(ev.evTime + config.BA_STAR_GOSSIP_TIMEOUT + 1,
+							  ev.evTime + config.BA_STAR_GOSSIP_TIMEOUT + 1,
 							  EventType.BASTAR_COUNT_VOTE_ONE,
 							  noMessage(),
-							  TIMEOUT_NOT_APPLICABLE,
+							  config.TIMEOUT_NOT_APPLICABLE,
 							  self,
 							  self,
 							  roundNumber,
@@ -471,22 +472,22 @@ class Node(object):
 			eventQ.add(newEvent2)
 		elif flag == INVOKE_BA_START_COUNT_VOTE_TWO:
 			# Push the reduction step 2 cound vote event after +3 sec
-			newEvent2 = Event(ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
-							  ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
+			newEvent2 = Event(ev.evTime + config.BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
+							  ev.evTime + config.BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
 							  EventType.BASTAR_COUNT_VOTE_TWO,
 							  noMessage(),
-							  TIMEOUT_NOT_APPLICABLE,
+							  config.TIMEOUT_NOT_APPLICABLE,
 							  self,
 							  self,
 							  roundNumber,
 							  stepNumber)
 			eventQ.add(newEvent2)
 		elif flag == INVOKE_BA_START_COUNT_VOTE_THREE:
-			newEvent2 = Event(ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
-							  ev.evTime + BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
+			newEvent2 = Event(ev.evTime + config.BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
+							  ev.evTime + config.BLOCK_VOTE_REDUCTION_S2_GOSSIP_TIMEOUT + 1,
 							  EventType.BASTAR_COUNT_VOTE_THREE,
 							  noMessage(),
-							  TIMEOUT_NOT_APPLICABLE,
+							  config.TIMEOUT_NOT_APPLICABLE,
 							  self,
 							  self,
 							  roundNumber,
@@ -501,17 +502,17 @@ class Node(object):
 		print(self.nodeId, " BA* Count Vote ONE is executing in step = "\
 			,ev.stepNumber)
 		step = ev.stepNumber
-		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)
-		if r is TIMEOUT:
+		r,block = self.CountVotes(config.T_STEP_REDUCTION_STEP_TWO, ev)
+		if r is config.TIMEOUT:
 			r = self.bastarBlockHash
 			block = self.bastarBlock
 		elif r is not self.getEmptyHash():
 			for s in range(ev.stepNumber,ev.stepNumber + 3):
-				self.BAstartCommitteVote(ev,ev.roundNumber,s,tou_step,\
+				self.BAstartCommitteVote(ev,ev.roundNumber,s,config.tou_step,\
 					DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)
 			if step == 3:
-				self.BAstartCommitteVote(ev,ev.roundNumber,FINAL_STEP,\
-					tou_final,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)
+				self.BAstartCommitteVote(ev,ev.roundNumber,config.FINAL_STEP,\
+					config.tou_final,DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)
 
 			self.bastarOutput = r
 			self.bastarBlock = block
@@ -519,11 +520,11 @@ class Node(object):
 							 ev.evTime + 1,
 							 EventType.FINAL_COUNT_VOTE,
 							 noMessage(),
-							 TIMEOUT_NOT_APPLICABLE,
+							 config.TIMEOUT_NOT_APPLICABLE,
 							 self,
 							 self,
 							 ev.roundNumber,
-							 FINAL_STEP)
+							 config.FINAL_STEP)
 
 			eventQ.add(newEvent)
 			return
@@ -532,7 +533,7 @@ class Node(object):
 			print("Need to move forward")
 
 		step += 1
-		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,\
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,config.tou_step,\
 			INVOKE_BA_START_COUNT_VOTE_TWO,r,block)
 
 
@@ -540,8 +541,8 @@ class Node(object):
 		print(self.nodeId, " BA* Count Vote two is executing in step = ",\
 			ev.stepNumber)
 		step = ev.stepNumber
-		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)
-		if r is TIMEOUT:
+		r,block = self.CountVotes(config.T_STEP_REDUCTION_STEP_TWO, ev)
+		if r is config.TIMEOUT:
 			r = self.getEmptyHash()
 			block = self.getEmptyBlock()
 		elif r == self.getEmptyHash():
@@ -549,7 +550,7 @@ class Node(object):
 				# vote on the empty block
 				# send an empty block also
 				block = self.getEmptyBlock()
-				self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,\
+				self.BAstartCommitteVote(ev,ev.roundNumber,step,config.tou_step,\
 					DO_NOT_INVOKE_ANY_MORE_COUNT_VOTE,r,block)
 
 			self.bastarOutput = r
@@ -558,29 +559,29 @@ class Node(object):
 							 ev.evTime + 1,
 							 EventType.FINAL_COUNT_VOTE,
 							 noMessage(),
-							 TIMEOUT_NOT_APPLICABLE,
+							 config.TIMEOUT_NOT_APPLICABLE,
 							 self,
 							 self,
 							 ev.roundNumber,
-							 FINAL_STEP)
+							 config.FINAL_STEP)
 
 			eventQ.add(newEvent)
 			return
 
 		step += 1
-		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,\
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,config.tou_step,\
 								INVOKE_BA_START_COUNT_VOTE_THREE,r,block)
 
 	def finalCountVote(self,ev):
-		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
+		r,block = self.CountVotes(config.T_STEP_REDUCTION_STEP_TWO, ev)  # TODO T_STEP check
 		#print("step number shuld be huge", ev.stepNumber)
 		if r == self.bastarOutput:
 			if r == self.getEmptyHash():
 				print("Added block was empty")
-			self.bastarBlock.state = FINAL_CONSENSUS
+			self.bastarBlock.state = config.FINAL_CONSENSUS
 			self.blockChain.append(self.bastarBlock)
-			print("[FINAL",str(self.nodeId),"](new block added)=", \
-					H(self.bastarBlock), "in round =",ev.roundNumber \
+			print(BOLDGREEN("[FINAL"),RESET(""),str(self.nodeId),"](new block added)=", \
+					H(self.bastarBlock), "in round =",BOLDGREEN(ev.roundNumber),RESET("") \
 					,"at time" , ev.evTime)
 			# print(str(self.nodeId),"Block transaction ",\
 			# 	self.bastarBlock.transactions )
@@ -592,29 +593,29 @@ class Node(object):
 			# 	self.bastarBlock.transactions )
 			if r == self.getEmptyHash():
 				print("Added block was empty")
-			self.bastarBlock.state = TENTATIVE_CONSENSUS
+			self.bastarBlock.state = config.TENTATIVE_CONSENSUS
 			self.blockChain.append(self.bastarBlock)
 
-		# newEvent = Event(ev.evTime + 1,
-		# 					ev.evTime + 1,
-		# 					EventType.BLOCK_PROPOSER_SORTITION_EVENT,
-		# 					noMessage(),
-		# 					TIMEOUT_NOT_APPLICABLE,
-		# 					self,
-		# 					self,
-		# 					ev.roundNumber + 1,
-		# 					0)
+		newEvent = Event(ev.evTime + 1,
+							ev.evTime + 1,
+							EventType.BLOCK_PROPOSER_SORTITION_EVENT,
+							noMessage(),
+							config.TIMEOUT_NOT_APPLICABLE,
+							self,
+							self,
+							ev.roundNumber + 1,
+							0)
 
-		#eventQ.add(newEvent)		
+		eventQ.add(newEvent)		
 		
 
 	def BAstartCountVoteThree(self,ev):
 		print(self.nodeId, " BA* Count Vote two is executing in step = ",\
 				ev.stepNumber)
 		step = ev.stepNumber
-		r,block = self.CountVotes(T_STEP_REDUCTION_STEP_TWO, ev) 
-		if r is TIMEOUT:
-			if self.commonCoin(ev.roundNumber,step,tou_step) == 0:
+		r,block = self.CountVotes(config.T_STEP_REDUCTION_STEP_TWO, ev) 
+		if r is config.TIMEOUT:
+			if self.commonCoin(ev.roundNumber,step,config.tou_step) == 0:
 				r = self.bastarBlockHash
 				block = self.bastarBlock
 			else:
@@ -622,7 +623,7 @@ class Node(object):
 				block = self.getEmptyBlock()
 
 		step += 1
-		self.BAstartCommitteVote(ev,ev.roundNumber,step,tou_step,\
+		self.BAstartCommitteVote(ev,ev.roundNumber,step,config.tou_step,\
 								INVOKE_BA_START_COUNT_VOTE_ONE,r,block)
 
 
@@ -713,7 +714,7 @@ class Node(object):
 		retval = Sortition(self.secretkey,self.seed,self.tau,"hello",self.w,self.W)
 		resp = srtnResp(retval[0],retval[1],retval[2])
 		if resp.j > 0:
-			print(self.nodeId,"sortition-priority-round",str(ev.roundNumber))
+			#print(BOLDBLUE("=>"),self.nodeId,"sortition-priority-round",str(ev.roundNumber),RESET(""))
 			minPrio = self.computePriority(resp) # min --> max in algorand
 			newPriorityMsg = priorityMessage(GossipType.PRIORITY_GOSSIP,
 										ev.roundNumber,
@@ -726,7 +727,7 @@ class Node(object):
 							ev.evTime,
 							EventType.PRIORITY_GOSSIP_EVENT,
 							newPriorityMsg,
-							PRIORITY_GOSSIP_TIMEOUT,
+							config.PRIORITY_GOSSIP_TIMEOUT,
 							self,
 							self,
 							ev.roundNumber,
@@ -734,11 +735,11 @@ class Node(object):
 
 			eventQ.add(newEvent)
 
-		newEvent = Event(ev.refTime + PRIORITY_GOSSIP_TIMEOUT + 1,
-							ev.evTime + PRIORITY_GOSSIP_TIMEOUT + 1,
+		newEvent = Event(ev.refTime + config.PRIORITY_GOSSIP_TIMEOUT + 1,
+							ev.evTime + config.PRIORITY_GOSSIP_TIMEOUT + 1,
 							EventType.SELECT_TOP_PROPOSER_EVENT,
 							noMessage(),
-							TIMEOUT_NOT_APPLICABLE,
+							config.TIMEOUT_NOT_APPLICABLE,
 							self,
 						 	self,
 							ev.roundNumber,
