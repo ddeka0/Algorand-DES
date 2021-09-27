@@ -115,7 +115,7 @@ def init_AsymmtericKeys(listsk, listpk):
 def init_w(ctx_Weight,pk_list):
 	for i in pk_list:
 		r = random.randint(1, config.MAX_ALGORAND)
-		ctx_Weight[i] = r
+		ctx_Weight[i.to_string()] = r
 
 
 def FindMaxPriorityAndNode(priorityList):

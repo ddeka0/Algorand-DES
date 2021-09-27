@@ -88,7 +88,7 @@ if __name__ == "__main__":
 	
 
 	for i in range(config.MAX_NODES):
-		allNodes.append(Node(i,sk_List[i],pk_List[i],ctx_Weight[pk_List[i]]))
+		allNodes.append(Node(i,sk_List[i],pk_List[i].to_string(),ctx_Weight[pk_List[i].to_string()]))
 
 	#2.3 fail stop adversary
 	# for i in range(MAX_NODES):
